@@ -116,6 +116,8 @@ jobs:
     environment: production
     needs: sonarqube
     if: github.ref == 'refs/heads/main'
+    outputs:
+      APP_IMAGE: ${{ steps.resolve_ecr.outputs.app_image }}
 
     steps:
       - name: Checkout repository
@@ -128,34 +130,63 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
-      - name: Ensure ECR Public repository exists
+      - name: Resolve APP_IMAGE from infra-created ECR repo
+        id: resolve_ecr
         run: |
-          REPO_NAME="video-workflow"
+          set -euo pipefail
           REGION="${{ vars.AWS_REGION }}"
-          # For public ECR the repository is created in the public gallery
+          # Expected repo name created by infra
+          REPO_NAME="video2frames-video-processor"
+
+          # Try to get the repositoryUri from ECR Public
+          REPO_URI=$(aws ecr-public describe-repositories \
+            --region "$REGION" \
+            --repository-names "$REPO_NAME" --query 'repositories[0].repositoryUri' --output text 2>/dev/null || true)
+
+          if [ -n "$REPO_URI" ] && [ "$REPO_URI" != "None" ]; then
+            echo "Found infra ECR repo: $REPO_URI"
+            echo "APP_IMAGE=$REPO_URI" >> $GITHUB_ENV
+            echo "app_image=$REPO_URI" >> $GITHUB_OUTPUT
+          else
+            # Fallback: use configured alias + default repo name (video-workflow)
+            FALLBACK="public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow"
+            echo "Infra ECR repo not found, falling back to $FALLBACK"
+            echo "APP_IMAGE=$FALLBACK" >> $GITHUB_ENV
+            echo "app_image=$FALLBACK" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Ensure ECR Public repository exists (create if missing)
+        run: |
+          REGION="${{ vars.AWS_REGION }}"
+          # derive repo name from APP_IMAGE (last path element)
+          APP_IMAGE_FULL="$APP_IMAGE"
+          REPO_NAME=$(basename "$APP_IMAGE_FULL")
           if ! aws ecr-public describe-repositories --repository-names "$REPO_NAME" --region "$REGION" >/dev/null 2>&1; then
+            echo "Creating public ECR repository: $REPO_NAME"
             aws ecr-public create-repository --repository-name "$REPO_NAME" --region "$REGION"
+          else
+            echo "Repository $REPO_NAME already exists in public ECR"
           fi
 
       - name: Login to Amazon ECR Public
-        uses: docker/login-action@v3
-        with:
-          registry: public.ecr.aws
-          username: ${{ secrets.AWS_ACCESS_KEY }}
-          password: ${{ secrets.AWS_ACCESS_SECRET }}
+        run: |
+          aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} | docker login --username AWS --password-stdin public.ecr.aws
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push App Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/app/Dockerfile
-          push: true
-          tags: |
-            ${{ env.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}
-            ${{ env.APP_IMAGE }}:latest
+      - name: Build and push App Image (docker CLI)
+        run: |
+          set -euo pipefail
+          echo "Using APP_IMAGE=$APP_IMAGE"
+          echo "Building image $APP_IMAGE:$APP_IMAGE_TAG"
+          docker build -f docker/app/Dockerfile -t "$APP_IMAGE:$APP_IMAGE_TAG" .
+          echo "Pushing $APP_IMAGE:$APP_IMAGE_TAG"
+          docker push "$APP_IMAGE:$APP_IMAGE_TAG"
+          echo "Tagging and pushing latest"
+          docker tag "$APP_IMAGE:$APP_IMAGE_TAG" "$APP_IMAGE:latest" || true
+          docker push "$APP_IMAGE:latest" || true
+        # APP_IMAGE is provided via GITHUB_ENV in previous step (resolve_ecr)
 
 # =========================================================
 # TERRAFORM APPLY
@@ -196,7 +227,7 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var region="${{ vars.AWS_REGION }}" \
-            -var app_image="${{ env.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}" \
+            -var app_image="${{ needs.build-and-push.outputs.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
             -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
