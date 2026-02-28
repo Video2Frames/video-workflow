@@ -1,0 +1,218 @@
+name: CI / CD - video-workflow
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  APP_NAME: video-workflow
+  # Public ECR alias (e.g. p6c0d2v5). Set this in repository vars.
+  ECR_PUBLIC_ALIAS: ${{ vars.ECR_PUBLIC_ALIAS }}
+  APP_IMAGE: public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow
+  APP_IMAGE_TAG: sha-${{ github.sha }}
+
+jobs:
+# =========================================================
+# TERRAFORM PLAN
+# =========================================================
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var region="${{ vars.AWS_REGION }}" \
+            -var app_image="${{ env.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}" \
+            -var db_user="${{ secrets.DB_USER }}" \
+            -var db_password="${{ secrets.DB_PASSWORD }}" \
+            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
+            -var api_url="${{ secrets.API_URL }}" \
+            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
+            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
+            -var aws_region="${{ vars.AWS_REGION }}" \
+            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var force_rollout="$(date +%s)"
+
+# =========================================================
+# SONARCLOUD
+# =========================================================
+  sonarqube:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: zulu
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build, test and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn -B clean verify \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=soat-tech-challenge-2025_video-workflow \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml,target/site/jacoco-it/jacoco.xml
+
+# =========================================================
+# BUILD & PUSH IMAGE
+# =========================================================
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    environment: production
+    needs: sonarqube
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
+
+      - name: Ensure ECR Public repository exists
+        run: |
+          REPO_NAME="video-workflow"
+          REGION="${{ vars.AWS_REGION }}"
+          # For public ECR the repository is created in the public gallery
+          if ! aws ecr-public describe-repositories --repository-names "$REPO_NAME" --region "$REGION" >/dev/null 2>&1; then
+            aws ecr-public create-repository --repository-name "$REPO_NAME" --region "$REGION"
+          fi
+
+      - name: Login to Amazon ECR Public
+        uses: docker/login-action@v3
+        with:
+          registry: public.ecr.aws
+          username: ${{ secrets.AWS_ACCESS_KEY }}
+          password: ${{ secrets.AWS_ACCESS_SECRET }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push App Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app/Dockerfile
+          push: true
+          tags: |
+            ${{ env.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}
+            ${{ env.APP_IMAGE }}:latest
+
+# =========================================================
+# TERRAFORM APPLY
+# =========================================================
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    environment: production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var region="${{ vars.AWS_REGION }}" \
+            -var app_image="${{ env.APP_IMAGE }}:${{ env.APP_IMAGE_TAG }}" \
+            -var db_user="${{ secrets.DB_USER }}" \
+            -var db_password="${{ secrets.DB_PASSWORD }}" \
+            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
+            -var api_url="${{ secrets.API_URL }}" \
+            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
+            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
+            -var aws_region="${{ vars.AWS_REGION }}" \
+            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var force_rollout="$(date +%s)"
+
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks --region ${{ vars.AWS_REGION }} update-kubeconfig \
+            --name ${{ vars.EKS_CLUSTER_NAME }}
+
+      - name: Log Ingress Hosts/IPs
+        run: |
+          kubectl get ingress -n hackathon
+
