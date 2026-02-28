@@ -1,0 +1,7 @@
+{
+  "queueName": "notifications-processing-queue.fifo",
+  "attributes": {
+    "FifoQueue": "true",
+    "ContentBasedDeduplication": "false"
+  }
+}

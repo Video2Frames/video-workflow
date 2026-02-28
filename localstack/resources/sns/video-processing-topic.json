@@ -1,0 +1,29 @@
+{
+  "topicName": "video-processing-topic.fifo",
+  "attributes": {
+    "FifoTopic": "true",
+    "ContentBasedDeduplication": "false"
+  },
+  "subscriptions": [
+    {
+      "queueName": "video-processing-queue.fifo",
+      "filterPolicy": { "event_type": ["video.uploaded"] }
+    },
+    {
+      "queueName": "status-updates-processing-queue.fifo",
+      "filterPolicy": { "event_type": [
+        "video.uploaded",
+        "video.processing_started",
+        "video.processed",
+        "video.processing_failed"
+      ]}
+    },
+    {
+      "queueName": "notifications-processing-queue.fifo",
+      "filterPolicy": { "event_type": [
+        "video.processed",
+        "video.processing_failed"
+      ]}
+    }
+  ]
+}

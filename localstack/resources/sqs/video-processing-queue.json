@@ -1,0 +1,7 @@
+{
+  "queueName": "video-processing-queue.fifo",
+  "attributes": {
+    "FifoQueue": "true",
+    "ContentBasedDeduplication": "false"
+  }
+}

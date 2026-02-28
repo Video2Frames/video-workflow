@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: video-workflow-service
+  namespace: hackathon
+spec:
+  type: ClusterIP
+  selector:
+    app: video-workflow-app
+  ports:
+    - port: 80
+      targetPort: 8080

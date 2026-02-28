@@ -1,0 +1,7 @@
+{
+  "queueName": "status-updates-processing-queue.fifo",
+  "attributes": {
+    "FifoQueue": "true",
+    "ContentBasedDeduplication": "false"
+  }
+}
