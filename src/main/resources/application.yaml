@@ -20,17 +20,17 @@ server:
 app:
   upload:
     bucket: ${VIDEO_BUCKET}
+    key-prefix: video-uploads/
 
 aws:
   region: ${AWS_REGION:us-east-1}
 
   s3:
     endpoint: ${AWS_S3_ENDPOINT:}
-    path-style-access: ${AWS_S3_PATH_STYLE_ACCESS:true}
+    path-style-access: ${AWS_S3_PATH_STYLE_ACCESS:false}
 
   sns:
     topic-arn: ${AWS_SNS_TOPIC_ARN}
-    endpoint: ${AWS_SNS_ENDPOINT:}
 
   sqs:
     status-queue-url: ${AWS_SQS_STATUS_QUEUE_URL}
