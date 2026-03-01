@@ -18,3 +18,11 @@ data "aws_iam_policy_document" "video_workflow_assume_role" {
     }
   }
 }
+
+
+
+resource "aws_iam_role" "video_workflow_irsa" {
+  name = "video-workflow-irsa"
+
+  assume_role_policy = data.aws_iam_policy_document.video_workflow_assume_role.json
+}
