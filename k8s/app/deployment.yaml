@@ -101,12 +101,6 @@ spec:
                   name: app-secret
                   key: AWS_SNS_TOPIC_ARN
 
-            - name: AWS_SNS_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: app-secret
-                  key: AWS_SNS_ENDPOINT
-                  optional: true
 
             # ==============================
             # SQS

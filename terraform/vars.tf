@@ -34,12 +34,6 @@ variable "aws_s3_endpoint" {
   default     = ""
 }
 
-variable "aws_sns_endpoint" {
-  description = "Optional SNS endpoint override (used mainly for localstack/testing)"
-  type        = string
-  default     = ""
-}
-
 variable "aws_s3_path_style_access" {
   description = "Whether to use path style access for S3 (true/false)"
   type        = bool

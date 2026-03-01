@@ -13,7 +13,6 @@ resource "kubernetes_secret" "app_secret" {
     VIDEO_BUCKET = var.video_bucket
 
     AWS_SNS_TOPIC_ARN = var.sns_topic_arn
-    AWS_SNS_ENDPOINT  = var.aws_sns_endpoint
 
     AWS_SQS_STATUS_QUEUE_URL = var.aws_sqs_status_queue_url
 
