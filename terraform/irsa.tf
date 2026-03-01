@@ -1,7 +1,3 @@
-#############################################
-# IRSA - Assume Role Policy
-#############################################
-
 data "aws_iam_policy_document" "video_workflow_assume_role" {
   statement {
     effect  = "Allow"
@@ -21,18 +17,8 @@ data "aws_iam_policy_document" "video_workflow_assume_role" {
       )
 
       values = [
-        "system:serviceaccount:hackathon:video-workflow-sa"
+        "system:serviceaccount:${kubernetes_namespace.hackathon.metadata[0].name}:${kubernetes_service_account.video_workflow_sa.metadata[0].name}"
       ]
     }
   }
-}
-
-resource "aws_iam_role" "video_workflow_irsa" {
-  name               = "video-workflow-irsa-role"
-  assume_role_policy = data.aws_iam_policy_document.video_workflow_assume_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "video_workflow_attach" {
-  role       = aws_iam_role.video_workflow_irsa.name
-  policy_arn = aws_iam_policy.video_workflow_policy.arn
 }

@@ -27,13 +27,33 @@ variable "sns_topic_arn" {
   description = "The ARN of the SNS topic for notifications"
 }
 
-variable "api_url" {
-  description = "Base URL exposed by API Gateway / Ingress"
-}
-
 variable "aws_account_id" {
   description = "The AWS account ID"
   type        = string
+}
+
+variable "aws_s3_endpoint" {
+  description = "Optional custom S3 endpoint (for localstack or custom S3-compatible endpoints)"
+  type        = string
+  default     = ""
+}
+
+variable "aws_sns_endpoint" {
+  description = "Optional SNS endpoint override"
+  type        = string
+  default     = ""
+}
+
+variable "aws_sqs_endpoint" {
+  description = "Optional SQS endpoint override"
+  type        = string
+  default     = ""
+}
+
+variable "aws_s3_path_style_access" {
+  description = "Whether to use path style access for S3 (true/false)"
+  type        = bool
+  default     = false
 }
 
 variable "tags" {
@@ -42,4 +62,14 @@ variable "tags" {
     Environment = "PRD"
     Project     = "tc-app"
   }
+}
+variable "spring_datasource_url" {
+    description = "The JDBC URL for the application's datasource"
+
+}
+variable "video_bucket" {
+    description = "The name of the S3 bucket for storing videos"
+}
+variable "aws_sqs_status_queue_url" {
+    description = "The URL of the SQS queue for status updates"
 }

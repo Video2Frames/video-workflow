@@ -1,18 +1,26 @@
 resource "kubernetes_secret" "app_secret" {
   metadata {
-    name      = "video-workflow-secret"
+    name      = "app-secret"
     namespace = kubernetes_namespace.hackathon.metadata[0].name
   }
 
-  type = "Opaque"
-
   data = {
-    SPRING_DATASOURCE_URL      = local.jdbc_url
+    SPRING_DATASOURCE_URL      = var.spring_datasource_url
     SPRING_DATASOURCE_USERNAME = var.db_user
     SPRING_DATASOURCE_PASSWORD = var.db_password
 
-    AWS_SNS_TOPIC_ARN        = local.sns_topic_arn
-    AWS_SQS_STATUS_QUEUE_URL = local.status_queue_url
-    VIDEO_BUCKET             = local.video_bucket_name
+    AWS_REGION                 = var.region
+    VIDEO_BUCKET               = var.video_bucket
+
+    AWS_SNS_TOPIC_ARN          = var.sns_topic_arn
+    AWS_SNS_ENDPOINT           = var.aws_sns_endpoint
+
+    AWS_SQS_ENDPOINT           = var.aws_sqs_endpoint
+    AWS_SQS_STATUS_QUEUE_URL   = var.aws_sqs_status_queue_url
+
+    AWS_S3_ENDPOINT            = var.aws_s3_endpoint
+    AWS_S3_PATH_STYLE_ACCESS   = tostring(var.aws_s3_path_style_access)
   }
+
+  type = "Opaque"
 }

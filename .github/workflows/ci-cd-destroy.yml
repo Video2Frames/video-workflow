@@ -8,81 +8,73 @@ on:
         required: true
         default: ''
 
-env:
-  # keep same defaults as main workflow
-  APP_NAME: video-workflow
-  APP_IMAGE_TAG: sha-${{ github.sha }}
+concurrency:
+  group: video-workflow-destroy
+  cancel-in-progress: false
 
 jobs:
   terraform-destroy:
     name: Terraform Destroy (manual)
     runs-on: ubuntu-latest
-    # only run when user explicitly types destroy in the workflow_dispatch input
     if: github.event.inputs.confirm == 'destroy'
     defaults:
       run:
         working-directory: terraform
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.13"
 
       - name: Confirm intent
-        run: |
-          echo "Destructive action confirmed. This job will run 'terraform destroy' in the terraform/ directory."
+        run: echo "Destructive action confirmed."
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
+      - uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: ${{ vars.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform Destroy (plan preview)
         run: |
-          terraform plan -destroy \
+          terraform plan -destroy -input=false \
             -var region="${{ vars.AWS_REGION }}" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
-            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
-            -var api_url="${{ secrets.API_URL }}" \
-            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
-            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
-            -var aws_region="${{ vars.AWS_REGION }}" \
-            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}"
+            -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
+            -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
+            -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
+            -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
+            -var aws_sqs_endpoint="${{ vars.AWS_SQS_ENDPOINT }}" \
+            -var aws_sns_endpoint="${{ vars.AWS_SNS_ENDPOINT }}" \
+            -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
+            -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
 
-      - name: Terraform Destroy (apply)
+      - name: Terraform Destroy
         run: |
-          terraform destroy -auto-approve \
+          terraform destroy -input=false -auto-approve \
             -var region="${{ vars.AWS_REGION }}" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
-            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
-            -var api_url="${{ secrets.API_URL }}" \
-            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
-            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
-            -var aws_region="${{ vars.AWS_REGION }}" \
-            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}"
-
-      - name: Post-destroy note
-        run: |
-          echo "Terraform destroy finished. Confirm resources removed in AWS console if needed."
+            -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
+            -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
+            -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
+            -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
+            -var aws_sqs_endpoint="${{ vars.AWS_SQS_ENDPOINT }}" \
+            -var aws_sns_endpoint="${{ vars.AWS_SNS_ENDPOINT }}" \
+            -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
+            -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
 
   skip-warning:
-    name: Skip warning (helper)
+    name: Skip warning
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm != 'destroy'
     steps:
-      - name: No confirm provided
-        run: |
-          echo "To run this destructive workflow you must provide the text 'destroy' in the 'confirm' input when triggering the workflow."
+      - run: |
+          echo "You must type 'destroy' to run this workflow."
           exit 1
-
