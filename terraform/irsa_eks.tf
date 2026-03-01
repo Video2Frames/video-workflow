@@ -4,16 +4,17 @@ resource "aws_iam_policy" "video_workflow_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+
       # SNS Publish
       {
         Effect = "Allow",
         Action = [
           "sns:Publish"
         ],
-        Resource = local.sns_topic_arn
+        Resource = var.sns_topic_arn
       },
 
-      # SQS Consume (status queue)
+      # SQS Consume
       {
         Effect = "Allow",
         Action = [
@@ -21,7 +22,7 @@ resource "aws_iam_policy" "video_workflow_policy" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ],
-        Resource = local.status_queue_arn
+        Resource = data.aws_sqs_queue.status_queue.arn
       },
 
       # S3 Access
@@ -31,7 +32,7 @@ resource "aws_iam_policy" "video_workflow_policy" {
           "s3:GetObject",
           "s3:PutObject"
         ],
-        Resource = "arn:aws:s3:::${local.video_bucket_name}/*"
+        Resource = "arn:aws:s3:::${var.video_bucket}/*"
       }
     ]
   })
