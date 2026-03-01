@@ -27,7 +27,10 @@ data "terraform_remote_state" "database" {
 }
 
 data "aws_sqs_queue" "status_queue" {
-  url = var.aws_sqs_status_queue_url
+  name = element(
+    split("/", var.aws_sqs_status_queue_url),
+    length(split("/", var.aws_sqs_status_queue_url)) - 1
+  )
 }
 
 data "aws_db_instance" "db_instance" {
