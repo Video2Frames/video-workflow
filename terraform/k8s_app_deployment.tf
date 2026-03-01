@@ -34,7 +34,7 @@ resource "kubernetes_deployment" "app" {
       }
 
       spec {
-        service_account_name = kubernetes_service_account.video_workflow_sa.metadata[0].name
+        service_account_name             = kubernetes_service_account.video_workflow_sa.metadata[0].name
         termination_grace_period_seconds = 30
 
         container {
