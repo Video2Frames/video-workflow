@@ -5,9 +5,9 @@ resource "kubernetes_secret" "app_secret" {
   }
 
   data = {
-    SPRING_DATASOURCE_URL      = var.spring_datasource_url
     SPRING_DATASOURCE_USERNAME = var.db_user
     SPRING_DATASOURCE_PASSWORD = var.db_password
+    SPRING_DATASOURCE_URL = local.jdbc_url
 
     AWS_REGION                 = var.region
     VIDEO_BUCKET               = var.video_bucket
