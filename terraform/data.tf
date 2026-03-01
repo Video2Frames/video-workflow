@@ -3,8 +3,8 @@ data "aws_availability_zones" "available" {}
 data "terraform_remote_state" "infra" {
   backend = "s3"
   config = {
-    bucket = "tc-2025-tf-states-bucket"
-    key    = "PRD/tc-infra"
+    bucket = "fiap-soat-hackathon-2026-tfstate"
+    key    = "PRD/hackathon-infra"
     region = "us-east-1"
   }
 }
@@ -20,8 +20,8 @@ data "aws_eks_cluster_auth" "cluster" {
 data "terraform_remote_state" "database" {
   backend = "s3"
   config = {
-    bucket = "tc-2025-tf-states-bucket"
-    key    = "PRD/tc-database"
+    bucket = "fiap-soat-hackathon-2026-tfstate"
+    key    = "PRD/hackathon-infra"
     region = "us-east-1"
   }
 }
