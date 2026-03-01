@@ -2,14 +2,27 @@ resource "kubernetes_deployment" "app" {
   metadata {
     name      = "video-workflow-deployment"
     namespace = kubernetes_namespace.hackathon.metadata[0].name
+
+    annotations = {
+      force_rollout = var.force_rollout
+    }
   }
 
   spec {
-    replicas = 1
+    replicas = 2
 
     selector {
       match_labels = {
         app = "video-workflow-app"
+      }
+    }
+
+    strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        max_unavailable = 0
+        max_surge       = 1
       }
     }
 
@@ -21,7 +34,8 @@ resource "kubernetes_deployment" "app" {
       }
 
       spec {
-        service_account_name = "video-workflow-sa"
+        service_account_name = kubernetes_service_account.video_workflow_sa.metadata[0].name
+        termination_grace_period_seconds = 30
 
         container {
           name              = "video-workflow-app"
@@ -30,6 +44,7 @@ resource "kubernetes_deployment" "app" {
 
           port {
             container_port = 8080
+            name           = "http"
           }
 
           resources {
@@ -43,53 +58,12 @@ resource "kubernetes_deployment" "app" {
             }
           }
 
-          env {
-            name = "SPRING_DATASOURCE_URL"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.app_secret.metadata[0].name
-                key  = "SPRING_DATASOURCE_URL"
-              }
-            }
-          }
-
-          env {
-            name = "SPRING_DATASOURCE_USERNAME"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.app_secret.metadata[0].name
-                key  = "SPRING_DATASOURCE_USERNAME"
-              }
-            }
-          }
-
-          env {
-            name = "SPRING_DATASOURCE_PASSWORD"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.app_secret.metadata[0].name
-                key  = "SPRING_DATASOURCE_PASSWORD"
-              }
-            }
-          }
-
-          env {
-            name = "AWS_SNS_TOPIC_ARN"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.app_secret.metadata[0].name
-                key  = "AWS_SNS_TOPIC_ARN"
-              }
-            }
-          }
-
-          env {
-            name = "AWS_SQS_STATUS_QUEUE_URL"
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.app_secret.metadata[0].name
-                key  = "AWS_SQS_STATUS_QUEUE_URL"
-              }
+          # ==============================
+          # ENV FROM SECRET (mais limpo)
+          # ==============================
+          env_from {
+            secret_ref {
+              name = kubernetes_secret.app_secret.metadata[0].name
             }
           }
 
@@ -101,6 +75,31 @@ resource "kubernetes_deployment" "app" {
                 key  = "VIDEO_BUCKET"
               }
             }
+          }
+
+          # ==============================
+          # HEALTH CHECKS
+          # ==============================
+          readiness_probe {
+            http_get {
+              path = "/actuator/health"
+              port = 8080
+            }
+            initial_delay_seconds = 20
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/actuator/health"
+              port = 8080
+            }
+            initial_delay_seconds = 60
+            period_seconds        = 20
+            timeout_seconds       = 5
+            failure_threshold     = 5
           }
         }
       }

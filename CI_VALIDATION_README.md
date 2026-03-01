@@ -24,7 +24,6 @@ Repository Secrets — GitHub Actions > Settings > Secrets
 - DB_USER
 - DB_PASSWORD
 - SNS_TOPIC_ARN
-- API_URL
 - SONAR_TOKEN
 
 > Observação: o workflow atual constrói a imagem e faz `terraform apply` — as credenciais precisam ter permissões para ler estados remotos (S3), manipular recursos AWS e executar `eks:DescribeCluster`.
@@ -35,10 +34,9 @@ Repository Secrets — GitHub Actions > Settings > Secrets
 Use estes comandos no diretório `terraform` onde o `apply` foi executado:
 
 ```bash
-terraform output -raw ecr_public_alias
 terraform output -raw video_processor_ecr_repository_uri
+terraform output -raw ecr_public_alias
 terraform output -raw cluster_name
-terraform output -raw api_gateway_url
 terraform output -raw database_uri
 terraform output -raw order_created_topic_arn
 ```
@@ -67,18 +65,11 @@ A) Testar `terraform plan` (local ou no runner)
 ```bash
 cd terraform
 terraform init
-terraform plan \
-  -var region="$AWS_REGION" \
-  -var app_image="$APP_IMAGE:$APP_IMAGE_TAG" \
+terraform plan -var region="$AWS_REGION" -var app_image="$APP_IMAGE:$APP_IMAGE_TAG" \
   -var db_user="$DB_USER" \
-  -var db_password="$DB_PASSWORD" \
-  -var sns_topic_arn="$SNS_TOPIC_ARN" \
-  -var api_url="$API_URL" \
-  -var aws_access_key="$AWS_ACCESS_KEY" \
-  -var aws_access_secret="$AWS_ACCESS_SECRET" \
-  -var aws_region="$AWS_REGION" \
-  -var aws_account_id="$AWS_ACCOUNT_ID" \
-  -var force_rollout="$(date +%s)"
+  -var db_password="$DB_PASSWORD" -var sns_topic_arn="$SNS_TOPIC_ARN" \
+  -var aws_access_key="$AWS_ACCESS_KEY" -var aws_access_secret="$AWS_ACCESS_SECRET" \
+  -var aws_region="$AWS_REGION" -var aws_account_id="$AWS_ACCOUNT_ID" -var force_rollout="$(date +%s)"
 ```
 
 B) Confirmar repositório ECR criado e imagens (após CI rodar)
@@ -93,7 +84,7 @@ C) Terraform Apply (exemplo)
 ```bash
 cd terraform
 terraform apply -auto-approve -var region="$AWS_REGION" -var app_image="$APP_IMAGE:$APP_IMAGE_TAG" \
-  -var db_user="$DB_USER" -var db_password="$DB_PASSWORD" -var sns_topic_arn="$SNS_TOPIC_ARN" -var api_url="$API_URL" \
+  -var db_user="$DB_USER" -var db_password="$DB_PASSWORD" -var sns_topic_arn="$SNS_TOPIC_ARN" \
   -var aws_access_key="$AWS_ACCESS_KEY" -var aws_access_secret="$AWS_ACCESS_SECRET" -var aws_region="$AWS_REGION" -var aws_account_id="$AWS_ACCOUNT_ID"
 
 terraform output -json > infra-outputs.json
@@ -149,7 +140,6 @@ AWS_ACCOUNT_ID
 DB_USER
 DB_PASSWORD
 SNS_TOPIC_ARN
-API_URL
 SONAR_TOKEN
 ```
 

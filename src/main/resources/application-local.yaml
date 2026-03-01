@@ -3,29 +3,30 @@ spring:
     activate:
       on-profile: local
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/video}
-    username: ${SPRING_DATASOURCE_USERNAME:video}
-    password: ${SPRING_DATASOURCE_PASSWORD:video}
+    url: jdbc:postgresql://localhost:5432/video
+    username: video
+    password: video
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
 
 aws:
+  region: us-east-1
   s3:
-    endpoint: ${AWS_S3_ENDPOINT:http://localhost:4566}
-    access-key: ${AWS_ACCESS_KEY_ID:test}
-    secret-key: ${AWS_SECRET_ACCESS_KEY:test}
-    path-style-access: ${AWS_S3_PATH_STYLE_ACCESS:true}
+    endpoint: http://localhost:4566
+    access-key: test
+    secret-key: test
+    path-style-access: true
   sns:
-    endpoint: ${AWS_SNS_ENDPOINT:http://localhost:4566}
-    topic-arn: ${AWS_SNS_TOPIC_ARN:}
+    endpoint: http://localhost:4566
+    topic-arn: arn:aws:sns:us-east-1:000000000000:video-processing-topic.fifo
   sqs:
-    endpoint: ${AWS_SQS_ENDPOINT:http://localhost:4566}
-    status-queue-url: ${AWS_SQS_STATUS_QUEUE_URL:http://localhost:4566/000000000000/status-updates-processing-queue.fifo}
+    endpoint: http://localhost:4566
+    status-queue-url: http://localhost:4566/000000000000/status-updates-processing-queue.fifo
 
 aws.sqs.poll-delay-ms: 5000
 
