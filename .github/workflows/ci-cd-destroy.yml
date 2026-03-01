@@ -1,0 +1,88 @@
+name: CI / CD - video-workflow - Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type the word "destroy" to confirm destructive action'
+        required: true
+        default: ''
+
+env:
+  # keep same defaults as main workflow
+  APP_NAME: video-workflow
+  APP_IMAGE_TAG: sha-${{ github.sha }}
+
+jobs:
+  terraform-destroy:
+    name: Terraform Destroy (manual)
+    runs-on: ubuntu-latest
+    # only run when user explicitly types destroy in the workflow_dispatch input
+    if: github.event.inputs.confirm == 'destroy'
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13"
+
+      - name: Confirm intent
+        run: |
+          echo "Destructive action confirmed. This job will run 'terraform destroy' in the terraform/ directory."
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Destroy (plan preview)
+        run: |
+          terraform plan -destroy \
+            -var region="${{ vars.AWS_REGION }}" \
+            -var db_user="${{ secrets.DB_USER }}" \
+            -var db_password="${{ secrets.DB_PASSWORD }}" \
+            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
+            -var api_url="${{ secrets.API_URL }}" \
+            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
+            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
+            -var aws_region="${{ vars.AWS_REGION }}" \
+            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}"
+
+      - name: Terraform Destroy (apply)
+        run: |
+          terraform destroy -auto-approve \
+            -var region="${{ vars.AWS_REGION }}" \
+            -var db_user="${{ secrets.DB_USER }}" \
+            -var db_password="${{ secrets.DB_PASSWORD }}" \
+            -var sns_topic_arn="${{ secrets.SNS_TOPIC_ARN }}" \
+            -var api_url="${{ secrets.API_URL }}" \
+            -var aws_access_key="${{ secrets.AWS_ACCESS_KEY }}" \
+            -var aws_access_secret="${{ secrets.AWS_ACCESS_SECRET }}" \
+            -var aws_region="${{ vars.AWS_REGION }}" \
+            -var aws_account_id="${{ secrets.AWS_ACCOUNT_ID }}"
+
+      - name: Post-destroy note
+        run: |
+          echo "Terraform destroy finished. Confirm resources removed in AWS console if needed."
+
+  skip-warning:
+    name: Skip warning (helper)
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm != 'destroy'
+    steps:
+      - name: No confirm provided
+        run: |
+          echo "To run this destructive workflow you must provide the text 'destroy' in the 'confirm' input when triggering the workflow."
+          exit 1
+

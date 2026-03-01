@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+
+  localstack:
+    build: .
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs,sns,dynamodb
+      - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=1
+    volumes:
+      - "./init:/etc/localstack/init"
+      - "./resources:/etc/localstack/resources"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: video
+      POSTGRES_USER: video
+      POSTGRES_PASSWORD: video
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./resources/db/rds:/docker-entrypoint-initdb.d"
