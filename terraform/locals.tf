@@ -12,7 +12,5 @@ locals {
 
   # Optional endpoints and S3 settings (fall back to empty or provided vars)
   aws_s3_endpoint       = var.aws_s3_endpoint
-  aws_sns_endpoint      = var.aws_sns_endpoint
-  aws_sqs_endpoint      = var.aws_sqs_endpoint
   aws_s3_path_style     = var.aws_s3_path_style_access
 }

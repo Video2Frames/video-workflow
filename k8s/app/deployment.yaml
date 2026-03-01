@@ -111,12 +111,6 @@ spec:
             # ==============================
             # SQS
             # ==============================
-            - name: AWS_SQS_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: app-secret
-                  key: AWS_SQS_ENDPOINT
-                  optional: true
 
             - name: AWS_SQS_STATUS_QUEUE_URL
               valueFrom:

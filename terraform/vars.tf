@@ -39,13 +39,7 @@ variable "aws_s3_endpoint" {
 }
 
 variable "aws_sns_endpoint" {
-  description = "Optional SNS endpoint override"
-  type        = string
-  default     = ""
-}
-
-variable "aws_sqs_endpoint" {
-  description = "Optional SQS endpoint override"
+  description = "Optional SNS endpoint override (used mainly for localstack/testing)"
   type        = string
   default     = ""
 }

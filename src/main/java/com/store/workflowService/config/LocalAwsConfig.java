@@ -19,7 +19,7 @@ public class LocalAwsConfig {
 
     @Bean
     public S3Client s3Client(
-            @Value("${aws.region}") String region,
+            @Value("${aws.region:us-east-1}") String region,
             @Value("${aws.s3.endpoint}") String endpoint,
             @Value("${aws.s3.access-key}") String accessKey,
             @Value("${aws.s3.secret-key}") String secretKey,
@@ -40,7 +40,7 @@ public class LocalAwsConfig {
 
     @Bean
     public SnsClient snsClient(
-            @Value("${aws.region}") String region,
+            @Value("${aws.region:us-east-1}") String region,
             @Value("${aws.sns.endpoint}") String endpoint,
             @Value("${aws.s3.access-key}") String accessKey,
             @Value("${aws.s3.secret-key}") String secretKey
@@ -59,8 +59,8 @@ public class LocalAwsConfig {
 
     @Bean
     public SqsClient sqsClient(
-            @Value("${aws.region}") String region,
-            @Value("${aws.sns.endpoint}") String endpoint,
+            @Value("${aws.region:us-east-1}") String region,
+            @Value("${aws.sqs.endpoint}") String endpoint,
             @Value("${aws.s3.access-key}") String accessKey,
             @Value("${aws.s3.secret-key}") String secretKey
     ) {

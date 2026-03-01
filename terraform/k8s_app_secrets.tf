@@ -15,7 +15,6 @@ resource "kubernetes_secret" "app_secret" {
     AWS_SNS_TOPIC_ARN          = var.sns_topic_arn
     AWS_SNS_ENDPOINT           = var.aws_sns_endpoint
 
-    AWS_SQS_ENDPOINT           = var.aws_sqs_endpoint
     AWS_SQS_STATUS_QUEUE_URL   = var.aws_sqs_status_queue_url
 
     AWS_S3_ENDPOINT            = var.aws_s3_endpoint

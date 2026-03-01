@@ -2,7 +2,7 @@ spring:
   application:
     name: video-workflow
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: prod
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -22,7 +22,7 @@ app:
     bucket: ${VIDEO_BUCKET}
 
 aws:
-  region: ${AWS_REGION}
+  region: ${AWS_REGION:us-east-1}
 
   s3:
     endpoint: ${AWS_S3_ENDPOINT:}
@@ -33,7 +33,6 @@ aws:
     endpoint: ${AWS_SNS_ENDPOINT:}
 
   sqs:
-    endpoint: ${AWS_SQS_ENDPOINT:}
     status-queue-url: ${AWS_SQS_STATUS_QUEUE_URL}
 
 springdoc:
