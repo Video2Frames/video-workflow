@@ -58,12 +58,12 @@ variable "tags" {
   }
 }
 variable "spring_datasource_url" {
-    description = "The JDBC URL for the application's datasource"
+  description = "The JDBC URL for the application's datasource"
 
 }
 variable "video_bucket" {
-    description = "The name of the S3 bucket for storing videos"
+  description = "The name of the S3 bucket for storing videos"
 }
 variable "aws_sqs_status_queue_url" {
-    description = "The URL of the SQS queue for status updates"
+  description = "The URL of the SQS queue for status updates"
 }
