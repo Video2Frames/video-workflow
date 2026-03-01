@@ -27,10 +27,6 @@ variable "sns_topic_arn" {
   description = "The ARN of the SNS topic for notifications"
 }
 
-variable "aws_account_id" {
-  description = "The AWS account ID"
-  type        = string
-}
 
 variable "aws_s3_endpoint" {
   description = "Optional custom S3 endpoint (for localstack or custom S3-compatible endpoints)"

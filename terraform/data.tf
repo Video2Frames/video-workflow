@@ -29,3 +29,5 @@ data "terraform_remote_state" "database" {
 data "aws_db_instance" "db_instance" {
   db_instance_identifier = data.terraform_remote_state.database.outputs.database_identifier
 }
+
+data "aws_caller_identity" "current" {}
