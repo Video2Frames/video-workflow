@@ -5,6 +5,7 @@ locals {
   status_queue_url  = data.terraform_remote_state.infra.outputs.status_updates_queue_url
   status_queue_arn  = data.terraform_remote_state.infra.outputs.status_updates_queue_arn
   video_bucket_name = data.terraform_remote_state.infra.outputs.video_bucket_name
+  aws_account_id    = data.aws_caller_identity.current.account_id
 
   # IRSA
   oidc_provider_arn = data.terraform_remote_state.infra.outputs.oidc_provider_arn
