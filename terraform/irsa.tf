@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "assume_role" {
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
-      type        = "Federated"
+      type = "Federated"
       identifiers = [
         data.aws_iam_openid_connect_provider.oidc.arn
       ]
