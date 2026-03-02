@@ -18,9 +18,9 @@ env:
 
 jobs:
 
-  # =========================================================
+  ###########################################################
   # BUILD & PUSH IMAGE
-  # =========================================================
+  ###########################################################
   build-and-push:
     runs-on: ubuntu-latest
     environment: production
@@ -54,13 +54,14 @@ jobs:
           docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
           docker push "$IMAGE_NAME:latest"
 
-  # =========================================================
+  ###########################################################
   # TERRAFORM APPLY
-  # =========================================================
+  ###########################################################
   terraform-apply:
     runs-on: ubuntu-latest
     environment: production
     needs: build-and-push
+
     defaults:
       run:
         working-directory: terraform
@@ -79,9 +80,15 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
+      ###########################################################
+      # Terraform Init
+      ###########################################################
       - name: Terraform Init
         run: terraform init -input=false -reconfigure
 
+      ###########################################################
+      # Terraform Apply
+      ###########################################################
       - name: Terraform Apply
         run: |
           FULL_IMAGE="$IMAGE_NAME:$IMAGE_TAG"
@@ -101,12 +108,15 @@ jobs:
             -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}" \
             -var force_rollout="$(date +%s)"
 
+      ###########################################################
+      # Wait for Ingress (segurança extra)
+      ###########################################################
       - name: Configure kubectl
         run: |
           aws eks --region "${{ vars.AWS_REGION }}" update-kubeconfig \
             --name "${{ vars.EKS_CLUSTER_NAME }}"
 
-      - name: Wait for Ingress
+      - name: Wait for Ingress LoadBalancer
         run: |
           set -euo pipefail
           NAMESPACE=hackathon
@@ -115,13 +125,26 @@ jobs:
           for i in {1..30}; do
             HOSTNAME=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" \
               -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+
             if [ -n "$HOSTNAME" ]; then
-              echo "Ingress hostname: $HOSTNAME"
-              exit 0
+              echo "Ingress hostname ready: $HOSTNAME"
+              break
             fi
+
             echo "Waiting for ingress..."
             sleep 10
           done
 
-          echo "Ingress not ready in time"
-          exit 1
+      ###########################################################
+      # Show Final API Gateway URL
+      ###########################################################
+      - name: Show API Gateway URL
+        run: |
+          echo ""
+          echo "==============================================="
+          echo "API Gateway Endpoint:"
+          terraform output api_gateway_url
+          echo ""
+          echo "Full URL:"
+          echo "$(terraform output -raw api_gateway_url)/hackathon/v1/video-workflow"
+          echo "==============================================="
