@@ -16,6 +16,7 @@ jobs:
   terraform-destroy:
     name: Terraform Destroy (manual)
     runs-on: ubuntu-latest
+    environment: production
     if: github.event.inputs.confirm == 'destroy'
     defaults:
       run:
@@ -37,34 +38,26 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
-      - name: Terraform Init
-        run: terraform init -input=false
+      - name: Terraform Init (reconfigure backend)
+        run: terraform init -input=false -reconfigure
 
-      - name: Terraform Destroy (plan preview)
+      - name: Terraform Destroy Plan
         run: |
-          terraform plan -destroy -input=false \
+          terraform plan -destroy -out=tfplan -input=false \
             -var region="${{ vars.AWS_REGION }}" \
+            -var app_image="destroy" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
             -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
             -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
             -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
             -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
+            -var aws_sns_endpoint="${{ vars.AWS_SNS_ENDPOINT }}" \
             -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
             -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
 
-      - name: Terraform Destroy
-        run: |
-          terraform destroy -input=false -auto-approve \
-            -var region="${{ vars.AWS_REGION }}" \
-            -var db_user="${{ secrets.DB_USER }}" \
-            -var db_password="${{ secrets.DB_PASSWORD }}" \
-            -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
-            -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
-            -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
-            -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
-            -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
-            -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
+      - name: Terraform Destroy Apply
+        run: terraform apply -auto-approve tfplan
 
   skip-warning:
     name: Skip warning
