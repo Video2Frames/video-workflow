@@ -1,13 +1,7 @@
 resource "kubernetes_ingress_v1" "app" {
   metadata {
-    name      = "video-workflow-route"
-    namespace = kubernetes_namespace.hackathon.metadata[0].name
-
-    annotations = {
-      "nginx.ingress.kubernetes.io/backend-protocol"   = "HTTP"
-      "nginx.ingress.kubernetes.io/proxy-read-timeout" = "60"
-      "nginx.ingress.kubernetes.io/proxy-send-timeout" = "60"
-    }
+    name      = "${local.app_name}-route"
+    namespace = local.namespace
   }
 
   spec {

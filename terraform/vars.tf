@@ -1,59 +1,32 @@
-variable "region" {
-  description = "The AWS region to deploy resources in"
-  default     = "us-east-1"
-}
+variable "region" {}
+variable "eks_cluster_name" {}
 
-variable "force_rollout" {
-  description = "A dummy variable to force redeployment of resources"
-  type        = string
-  default     = ""
-}
-
-variable "app_image" {
-  description = "The Docker image for the application"
-}
+variable "app_image" {}
 
 variable "db_user" {
-  description = "The username for the RDS instance"
-  sensitive   = true
+  sensitive = true
 }
 
 variable "db_password" {
-  description = "The password for the RDS instance"
-  sensitive   = true
+  sensitive = true
 }
 
-variable "sns_topic_arn" {
-  description = "The ARN of the SNS topic for notifications"
-}
+variable "video_bucket" {}
+variable "aws_sqs_status_queue_url" {}
+variable "sns_topic_arn" {}
 
+variable "force_rollout" {
+  default = ""
+}
 
 variable "aws_s3_endpoint" {
-  description = "Optional custom S3 endpoint (for localstack or custom S3-compatible endpoints)"
-  type        = string
-  default     = ""
+  type    = string
+  default = ""
 }
 
 variable "aws_s3_path_style_access" {
-  description = "Whether to use path style access for S3 (true/false)"
-  type        = bool
-  default     = false
+  type    = string
+  default = "false"
 }
 
-variable "tags" {
-  description = "A map of tags to assign to resources"
-  default = {
-    Environment = "PRD"
-    Project     = "tc-app"
-  }
-}
-variable "spring_datasource_url" {
-  description = "The JDBC URL for the application's datasource"
-
-}
-variable "video_bucket" {
-  description = "The name of the S3 bucket for storing videos"
-}
-variable "aws_sqs_status_queue_url" {
-  description = "The URL of the SQS queue for status updates"
-}
+variable "spring_datasource_url" {}

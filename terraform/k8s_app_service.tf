@@ -1,19 +1,17 @@
 resource "kubernetes_service" "app" {
   metadata {
-    name      = "video-workflow-service"
-    namespace = kubernetes_namespace.hackathon.metadata[0].name
+    name      = "${local.app_name}-service"
+    namespace = local.namespace
   }
 
   spec {
-    type = "ClusterIP"
-
-    selector = {
-      app = "video-workflow-app"
-    }
+    selector = local.labels
 
     port {
       port        = 80
       target_port = 8080
     }
+
+    type = "ClusterIP"
   }
 }

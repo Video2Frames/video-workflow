@@ -43,16 +43,14 @@ jobs:
 
       - name: Terraform Destroy Plan
         run: |
-          terraform plan -destroy -out=tfplan -input=false \
+          terraform plan -destroy -out=tfplan -input=false -lock-timeout=300s \
             -var region="${{ vars.AWS_REGION }}" \
-            -var app_image="destroy" \
+            -var app_image="public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow:latest" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
-            -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
             -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
             -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
             -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
-            -var aws_sns_endpoint="${{ vars.AWS_SNS_ENDPOINT }}" \
             -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
             -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
 

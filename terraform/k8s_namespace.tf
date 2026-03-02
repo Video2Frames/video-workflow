@@ -1,5 +1,5 @@
-resource "kubernetes_namespace" "hackathon" {
+resource "kubernetes_namespace" "app" {
   metadata {
-    name = "hackathon"
+    name = local.namespace
   }
 }

@@ -1,28 +1,107 @@
-data "aws_iam_policy_document" "video_workflow_assume_role" {
+############################################
+# OIDC Provider (busca o provider já criado pelo EKS)
+############################################
+
+data "aws_iam_openid_connect_provider" "oidc" {
+  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
+}
+
+############################################
+# Assume Role Policy (IRSA)
+############################################
+
+data "aws_iam_policy_document" "assume_role" {
   statement {
-    effect  = "Allow"
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
       type        = "Federated"
-      identifiers = [data.terraform_remote_state.infra.outputs.oidc_provider_arn]
+      identifiers = [
+        data.aws_iam_openid_connect_provider.oidc.arn
+      ]
     }
 
     condition {
-      test     = "StringEquals"
-      variable = "${data.terraform_remote_state.infra.outputs.oidc_provider_url}:sub"
+      test = "StringEquals"
+
+      variable = "${replace(
+        data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer,
+        "https://",
+        ""
+      )}:sub"
 
       values = [
-        "system:serviceaccount:hackathon:video-workflow-sa"
+        "system:serviceaccount:${local.namespace}:${local.app_name}"
       ]
     }
   }
 }
 
+############################################
+# IAM Role para IRSA
+############################################
 
+resource "aws_iam_role" "irsa" {
+  name               = "${local.app_name}-irsa"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
 
-resource "aws_iam_role" "video_workflow_irsa" {
-  name = "video-workflow-irsa"
+############################################
+# Policy da aplicação
+############################################
 
-  assume_role_policy = data.aws_iam_policy_document.video_workflow_assume_role.json
+resource "aws_iam_policy" "video_workflow_policy" {
+  name = "video-workflow-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = var.sns_topic_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = data.aws_sqs_queue.status_queue.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject"
+        ]
+        Resource = "arn:aws:s3:::${var.video_bucket}/*"
+      }
+    ]
+  })
+}
+
+############################################
+# Attach da policy à role
+############################################
+
+resource "aws_iam_role_policy_attachment" "attach" {
+  role       = aws_iam_role.irsa.name
+  policy_arn = aws_iam_policy.video_workflow_policy.arn
+}
+
+############################################
+# Kubernetes Service Account com IRSA
+############################################
+
+resource "kubernetes_service_account" "app" {
+  metadata {
+    name      = local.app_name
+    namespace = local.namespace
+
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.irsa.arn
+    }
+  }
 }
