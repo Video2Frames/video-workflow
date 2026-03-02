@@ -2,6 +2,11 @@ resource "kubernetes_ingress_v1" "app" {
   metadata {
     name      = "${local.app_name}-route"
     namespace = local.namespace
+
+    annotations = {
+      "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"
+      "nginx.ingress.kubernetes.io/use-regex"      = "true"
+    }
   }
 
   wait_for_load_balancer = true
@@ -12,8 +17,8 @@ resource "kubernetes_ingress_v1" "app" {
     rule {
       http {
         path {
-          path      = "/hackathon/v1/video-workflow"
-          path_type = "Prefix"
+          path      = "/hackathon/v1/video-workflow(/|$)(.*)"
+          path_type = "ImplementationSpecific"
 
           backend {
             service {
