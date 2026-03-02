@@ -4,6 +4,8 @@ resource "kubernetes_ingress_v1" "app" {
     namespace = local.namespace
   }
 
+  wait_for_load_balancer = true
+
   spec {
     ingress_class_name = "nginx"
 
