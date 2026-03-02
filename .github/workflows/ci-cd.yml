@@ -13,8 +13,8 @@ concurrency:
 env:
   APP_NAME: video-workflow
   ECR_PUBLIC_ALIAS: ${{ vars.ECR_PUBLIC_ALIAS }}
-  APP_IMAGE: public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow
-  APP_IMAGE_TAG: sha-${{ github.sha }}
+  IMAGE_NAME: public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow
+  IMAGE_TAG: sha-${{ github.sha }}
 
 jobs:
 
@@ -27,8 +27,7 @@ jobs:
     environment: production
     if: github.ref == 'refs/heads/main'
     outputs:
-      APP_IMAGE: ${{ steps.set_image.outputs.app_image }}
-      APP_IMAGE_TAG: ${{ steps.set_image.outputs.app_image_tag }}
+      FULL_IMAGE: ${{ steps.export.outputs.full_image }}
 
     steps:
       - uses: actions/checkout@v5
@@ -39,11 +38,9 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
-      - name: Set Image Outputs
-        id: set_image
-        run: |
-          echo "app_image=${APP_IMAGE}" >> $GITHUB_OUTPUT
-          echo "app_image_tag=${APP_IMAGE_TAG}" >> $GITHUB_OUTPUT
+      - name: Export Full Image
+        id: export
+        run: echo "full_image=${IMAGE_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Ensure ECR Public repository exists
         run: |
@@ -59,10 +56,10 @@ jobs:
 
       - name: Build and Push
         run: |
-          docker build -f docker/app/Dockerfile -t "$APP_IMAGE:$APP_IMAGE_TAG" .
-          docker push "$APP_IMAGE:$APP_IMAGE_TAG"
-          docker tag "$APP_IMAGE:$APP_IMAGE_TAG" "$APP_IMAGE:latest"
-          docker push "$APP_IMAGE:latest"
+          docker build -f docker/app/Dockerfile -t "${IMAGE_NAME}:${IMAGE_TAG}" .
+          docker push "${IMAGE_NAME}:${IMAGE_TAG}"
+          docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
+          docker push "${IMAGE_NAME}:latest"
 
 
   # =========================================================
@@ -104,7 +101,7 @@ jobs:
           terraform plan -input=false -lock-timeout=300s \
             -var region="${{ vars.AWS_REGION }}" \
             -var eks_cluster_name="${{ vars.EKS_CLUSTER_NAME }}" \
-            -var app_image="${{ needs.build-and-push.outputs.APP_IMAGE }}:${{ needs.build-and-push.outputs.APP_IMAGE_TAG }}" \
+            -var app_image="${{ needs.build-and-push.outputs.FULL_IMAGE }}" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
             -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
@@ -150,7 +147,7 @@ jobs:
           terraform apply -input=false -auto-approve -lock-timeout=300s \
             -var region="${{ vars.AWS_REGION }}" \
             -var eks_cluster_name="${{ vars.EKS_CLUSTER_NAME }}" \
-            -var app_image="${{ needs.build-and-push.outputs.APP_IMAGE }}:${{ needs.build-and-push.outputs.APP_IMAGE_TAG }}" \
+            -var app_image="${{ needs.build-and-push.outputs.FULL_IMAGE }}" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
             -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
@@ -165,22 +162,3 @@ jobs:
         run: |
           aws eks --region ${{ vars.AWS_REGION }} update-kubeconfig \
             --name ${{ vars.EKS_CLUSTER_NAME }}
-
-      - name: Wait for Ingress
-        run: |
-          set -euo pipefail
-          NAMESPACE=hackathon
-          INGRESS_NAME=video-workflow-route
-
-          for i in {1..30}; do
-            HOSTNAME=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
-            if [ -n "$HOSTNAME" ]; then
-              echo "Ingress hostname: $HOSTNAME"
-              exit 0
-            fi
-            echo "Waiting for ingress..."
-            sleep 10
-          done
-
-          echo "Ingress not ready in time"
-          exit 1
