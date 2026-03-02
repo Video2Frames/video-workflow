@@ -11,6 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  ECR_ALIAS: ${{ vars.ECR_PUBLIC_ALIAS }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
   IMAGE_NAME: public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow
   IMAGE_TAG: sha-${{ github.sha }}
 
@@ -20,12 +22,8 @@ jobs:
   # BUILD & PUSH IMAGE
   # =========================================================
   build-and-push:
-    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     environment: production
-    if: github.ref == 'refs/heads/main'
-    outputs:
-      IMAGE: ${{ steps.export.outputs.image }}
 
     steps:
       - uses: actions/checkout@v5
@@ -33,39 +31,33 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
-
-      - name: Export Full Image
-        id: export
-        run: echo "image=${IMAGE_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Ensure ECR Public repository exists
         run: |
           REPO="video-workflow"
-          if ! aws ecr-public describe-repositories --repository-names "$REPO" --region "${{ vars.AWS_REGION }}" >/dev/null 2>&1; then
-            aws ecr-public create-repository --repository-name "$REPO" --region "${{ vars.AWS_REGION }}"
+          if ! aws ecr-public describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1; then
+            aws ecr-public create-repository --repository-name "$REPO" --region "$AWS_REGION"
           fi
 
       - name: Login to ECR Public
         run: |
-          aws ecr-public get-login-password --region ${{ vars.AWS_REGION }} \
+          aws ecr-public get-login-password --region "$AWS_REGION" \
           | docker login --username AWS --password-stdin public.ecr.aws
 
-      - name: Build and Push
+      - name: Build and Push Image
         run: |
-          docker build -f docker/app/Dockerfile -t "${IMAGE_NAME}:${IMAGE_TAG}" .
-          docker push "${IMAGE_NAME}:${IMAGE_TAG}"
-          docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
-          docker push "${IMAGE_NAME}:latest"
-
+          docker build -f docker/app/Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" .
+          docker push "$IMAGE_NAME:$IMAGE_TAG"
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:latest"
 
   # =========================================================
-  # TERRAFORM PLAN
+  # TERRAFORM APPLY
   # =========================================================
-  terraform-plan:
-    name: Terraform Plan
+  terraform-apply:
     runs-on: ubuntu-latest
     environment: production
     needs: build-and-push
@@ -83,57 +75,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          aws-region: ${{ vars.AWS_REGION }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
-
-      - name: Terraform Init
-        run: terraform init -input=false -reconfigure
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: |
-          terraform plan -input=false -lock-timeout=300s \
-            -var region="${{ vars.AWS_REGION }}" \
-            -var eks_cluster_name="${{ vars.EKS_CLUSTER_NAME }}" \
-            -var app_image="${{ needs.build-and-push.outputs.IMAGE }}" \
-            -var db_user="${{ secrets.DB_USER }}" \
-            -var db_password="${{ secrets.DB_PASSWORD }}" \
-            -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
-            -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
-            -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
-            -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
-            -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
-            -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}" \
-            -var force_rollout="$(date +%s)"
-
-
-  # =========================================================
-  # TERRAFORM APPLY
-  # =========================================================
-  terraform-apply:
-    name: Terraform Apply
-    runs-on: ubuntu-latest
-    environment: production
-    needs: terraform-plan
-    if: github.ref == 'refs/heads/main'
-    defaults:
-      run:
-        working-directory: terraform
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.13"
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
 
@@ -142,10 +84,13 @@ jobs:
 
       - name: Terraform Apply
         run: |
+          FULL_IMAGE="$IMAGE_NAME:$IMAGE_TAG"
+          echo "Deploying image: $FULL_IMAGE"
+
           terraform apply -input=false -auto-approve -lock-timeout=300s \
             -var region="${{ vars.AWS_REGION }}" \
             -var eks_cluster_name="${{ vars.EKS_CLUSTER_NAME }}" \
-            -var app_image="${{ needs.terraform-plan.outputs.IMAGE || needs.build-and-push.outputs.IMAGE }}" \
+            -var app_image="$FULL_IMAGE" \
             -var db_user="${{ secrets.DB_USER }}" \
             -var db_password="${{ secrets.DB_PASSWORD }}" \
             -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
@@ -158,8 +103,8 @@ jobs:
 
       - name: Configure kubectl
         run: |
-          aws eks --region ${{ vars.AWS_REGION }} update-kubeconfig \
-            --name ${{ vars.EKS_CLUSTER_NAME }}
+          aws eks --region "${{ vars.AWS_REGION }}" update-kubeconfig \
+            --name "${{ vars.EKS_CLUSTER_NAME }}"
 
       - name: Wait for Ingress
         run: |
@@ -168,7 +113,8 @@ jobs:
           INGRESS_NAME=video-workflow-route
 
           for i in {1..30}; do
-            HOSTNAME=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+            HOSTNAME=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
             if [ -n "$HOSTNAME" ]; then
               echo "Ingress hostname: $HOSTNAME"
               exit 0

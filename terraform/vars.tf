@@ -1,7 +1,10 @@
 variable "region" {}
 variable "eks_cluster_name" {}
 
-variable "app_image" {}
+variable "app_image" {
+  description = "Docker image"
+  type        = string
+}
 
 variable "db_user" {
   sensitive = true
