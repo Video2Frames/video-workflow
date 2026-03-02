@@ -17,7 +17,7 @@ resource "kubernetes_secret" "app" {
     AWS_S3_ENDPOINT          = var.aws_s3_endpoint
     AWS_S3_PATH_STYLE_ACCESS = var.aws_s3_path_style_access
 
-    SPRING_JPA_HIBERNATE_DDL_AUTO = "validate"
+    SPRING_JPA_HIBERNATE_DDL_AUTO = "create"
     SWAGGER_ENABLED               = "true"
   }
 
