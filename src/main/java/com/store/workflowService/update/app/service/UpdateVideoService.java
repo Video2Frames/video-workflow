@@ -48,17 +48,8 @@ public class UpdateVideoService implements UpdateStatusUseCase {
 
         switch (eventType) {
             case "video.uploaded" -> {
-                // require userId and uploadPath to avoid DB constraint issues
-                if (event.getUserId() == null || event.getUploadPath() == null) {
-                    log.warn("video.uploaded recebido sem user_id ou upload_path para videoId={}; ignorando", videoId);
-                    return null;
-                }
-
-                // create or update with userId, upload info
-                wf.setUserId(event.getUserId());
-                wf.setUploadPath(event.getUploadPath());
-                wf.setUploadedAt(event.getUploadedAt());
-                wf.setStatus("UPLOADED");
+                log.info("Ignorando evento video.uploaded para videoId={}", videoId);
+                return null;
             }
             case "video.processing_started" -> wf.setStatus("PROCESSING");
             case "video.processed" -> {
