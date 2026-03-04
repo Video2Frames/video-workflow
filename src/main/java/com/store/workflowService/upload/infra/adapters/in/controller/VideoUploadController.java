@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 @RestController
-@RequestMapping("/videos")
+@RequestMapping("/api/upload")
 public class VideoUploadController {
 
     private static final long MAX_UPLOAD_BYTES = 200L * 1024L * 1024L;
@@ -22,7 +22,8 @@ public class VideoUploadController {
         this.service = service;
     }
 
-    @PostMapping(consumes = "multipart/form-data")
+
+    @PostMapping(value = "/videos", consumes = "multipart/form-data")
     public ResponseEntity<Void> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam("userId") String userId

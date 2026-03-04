@@ -11,6 +11,8 @@ services:
       - SERVICES=s3,sqs,sns,dynamodb
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=1
+      - LOCALSTACK_HOSTNAME=host.docker.internal
+      - HOSTNAME_EXTERNAL=host.docker.internal
     volumes:
       - "./init:/etc/localstack/init"
       - "./resources:/etc/localstack/resources"
