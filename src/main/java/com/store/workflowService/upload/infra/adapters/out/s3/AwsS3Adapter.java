@@ -4,6 +4,9 @@ import com.store.workflowService.upload.domain.model.Video;
 import com.store.workflowService.upload.domain.model.VideoUploadResult;
 import com.store.workflowService.upload.domain.repository.VideoStoragePort;
 import com.store.workflowService.upload.infra.config.UploadProperties;
+import com.store.workflowService.utils.exception.VideoUploadException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -14,6 +17,8 @@ import java.io.InputStream;
 
 @Component
 public class AwsS3Adapter implements VideoStoragePort {
+
+    private static final Logger log = LoggerFactory.getLogger(AwsS3Adapter.class);
 
     private final S3Client s3Client;
     private final UploadProperties uploadProperties;
@@ -45,13 +50,21 @@ public class AwsS3Adapter implements VideoStoragePort {
                 .key(key)
                 .build();
 
-        PutObjectResponse response =
-                s3Client.putObject(request, RequestBody.fromInputStream(content, contentLength));
+        try {
+            log.info("Uploading to S3 bucket='{}' key='{}' contentLength={}", uploadProperties.getBucket(), key, contentLength);
 
-        return new VideoUploadResult(
-                uploadProperties.getBucket(),
-                key,
-                response.eTag()
-        );
+            PutObjectResponse response = s3Client.putObject(request, RequestBody.fromInputStream(content, contentLength));
+
+            log.info("S3 putObject succeeded: eTag={}", response.eTag());
+
+            return new VideoUploadResult(
+                    uploadProperties.getBucket(),
+                    key,
+                    response.eTag()
+            );
+        } catch (Exception e) {
+            log.error("Failed to upload to S3 bucket='{}' key='{}'. Error: {}", uploadProperties.getBucket(), key, e.toString(), e);
+            throw new VideoUploadException("Failed to upload file to S3", e);
+        }
     }
 }
