@@ -43,7 +43,6 @@ public class UploadVideoUseCase {
             wf.setVideoId(videoId);
             wf.setUserId(video.getUserId());
             wf.setUploadPath("s3://" + result.getBucket() + "/" + result.getKey());
-            // convert OffsetDateTime to Instant
             if (video.getUploadedAt() != null) {
                 wf.setUploadedAt(video.getUploadedAt().toInstant());
             }

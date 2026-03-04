@@ -31,7 +31,6 @@ public class AwsS3Adapter implements VideoStoragePort {
     @Override
     public VideoUploadResult upload(Video video, InputStream content, long contentLength) {
 
-        // Build filename as id + extension (keep only extension from original filename)
         String originalFileName = video.getFileName();
         String extension = "";
         if (originalFileName != null && originalFileName.contains(".")) {
@@ -39,7 +38,7 @@ public class AwsS3Adapter implements VideoStoragePort {
         }
         String fileName = video.getId() + extension;
 
-        String key = uploadProperties.getKeyPrefix()
+        String key = "video-uploads"
                 + "/"
                 + video.getUserId()
                 + "/"
