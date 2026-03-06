@@ -4,7 +4,7 @@ resource "kubernetes_ingress_v1" "app" {
     namespace = local.namespace
 
     annotations = {
-      "nginx.ingress.kubernetes.io/rewrite-target" = "/$$1"
+      "nginx.ingress.kubernetes.io/rewrite-target" = "/$2"
       "nginx.ingress.kubernetes.io/use-regex"      = "true"
     }
   }
@@ -17,7 +17,7 @@ resource "kubernetes_ingress_v1" "app" {
     rule {
       http {
         path {
-          path      = "/hackathon/v1/video-workflow/(.*)"
+          path      = "/hackathon/v1/video-workflow(/|$)(.*)"
           path_type = "ImplementationSpecific"
 
           backend {

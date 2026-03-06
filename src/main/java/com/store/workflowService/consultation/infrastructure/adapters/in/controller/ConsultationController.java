@@ -39,9 +39,9 @@ public class ConsultationController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/videos/{videoId}/download")
+    @GetMapping("/download")
     public ResponseEntity<InputStreamResource> downloadVideo(
-            @PathVariable("videoId") String videoId,
+            @RequestParam("video_id") String videoId,
             @RequestParam(name = "user_id") String userId) {
         if (userId == null || userId.isBlank()) {
             return ResponseEntity.badRequest().build();
