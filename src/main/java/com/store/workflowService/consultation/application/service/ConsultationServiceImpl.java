@@ -6,6 +6,7 @@ import com.store.workflowService.consultation.application.usecases.dto.VideoDto;
 import com.store.workflowService.update.domain.model.VideoWorkflow;
 import com.store.workflowService.update.domain.repository.VideoWorkflowRepository;
 import com.store.workflowService.upload.infra.config.UploadProperties;
+import com.store.workflowService.utils.exception.VideoNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
@@ -64,14 +65,15 @@ public class ConsultationServiceImpl implements ConsultationUseCase {
         log.info("Download requested user={} videoId={}", userId, videoId);
         VideoWorkflow wf = repository.findByVideoId(videoId).orElse(null);
         if (wf == null) {
-            throw new RuntimeException("Video not found: " + videoId);
+            throw new VideoNotFoundException("Video not found: " + videoId);
         }
         if (!userId.equals(wf.getUserId())) {
-            throw new RuntimeException("User does not own this video");
+            // Avoid leaking ownership info; treat as not found
+            throw new VideoNotFoundException("Video not found: " + videoId);
         }
         String outputPath = wf.getOutputPath();
         if (outputPath == null || outputPath.isBlank()) {
-            throw new RuntimeException("Video has no output path: " + videoId);
+            throw new VideoNotFoundException("Video has no output path: " + videoId);
         }
 
         String bucket = uploadProperties.getBucket();
@@ -147,7 +149,7 @@ public class ConsultationServiceImpl implements ConsultationUseCase {
             List<S3Object> contents = listRes.contents();
             if (contents == null || contents.isEmpty()) {
                 log.info("No objects found under prefix bucket={} prefix={} for videoId={}", bucket, prefix, videoId);
-                throw new RuntimeException("S3 object not found: " + bucket + "/" + key);
+                throw new VideoNotFoundException("S3 object not found: " + bucket + "/" + key);
             }
 
             try {
