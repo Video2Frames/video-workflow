@@ -16,6 +16,7 @@ data "aws_iam_policy_document" "assume_role" {
 
     principals {
       type = "Federated"
+
       identifiers = [
         data.aws_iam_openid_connect_provider.oidc.arn
       ]
@@ -56,11 +57,19 @@ resource "aws_iam_policy" "video_workflow_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+
+      ####################################
+      # Permissão para publicar no SNS
+      ####################################
       {
         Effect   = "Allow"
         Action   = ["sns:Publish"]
         Resource = var.sns_topic_arn
       },
+
+      ####################################
+      # Permissão para consumir SQS
+      ####################################
       {
         Effect = "Allow"
         Action = [
@@ -70,6 +79,10 @@ resource "aws_iam_policy" "video_workflow_policy" {
         ]
         Resource = data.aws_sqs_queue.status_queue.arn
       },
+
+      ####################################
+      # Bucket de upload de vídeos
+      ####################################
       {
         Effect = "Allow"
         Action = [
@@ -77,7 +90,19 @@ resource "aws_iam_policy" "video_workflow_policy" {
           "s3:PutObject"
         ]
         Resource = "arn:aws:s3:::${var.video_bucket}/*"
+      },
+
+      ####################################
+      # Bucket de frames / zip gerado
+      ####################################
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "arn:aws:s3:::video2frames-extracted-frames/*"
       }
+
     ]
   })
 }
