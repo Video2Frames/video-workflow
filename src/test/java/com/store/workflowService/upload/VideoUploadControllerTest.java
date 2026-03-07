@@ -35,7 +35,7 @@ class VideoUploadControllerTest {
     void upload_missingUserId_throwsBadRequest() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "test.mp4", "video/mp4", "data".getBytes());
 
-        mockMvc.perform(multipart("/videos").file(file))
+        mockMvc.perform(multipart("/api/upload/videos").file(file))
                 .andExpect(status().isInternalServerError()); // VideoUploadException handled as 500
     }
 
@@ -43,7 +43,7 @@ class VideoUploadControllerTest {
     void upload_emptyFile_throws() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "", "video/mp4", new byte[0]);
 
-        mockMvc.perform(multipart("/videos").file(file).param("userId", "u1"))
+        mockMvc.perform(multipart("/api/upload/videos").file(file).param("userId", "u1"))
                 .andExpect(status().isInternalServerError());
     }
 
@@ -52,7 +52,7 @@ class VideoUploadControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "video.mp4", "video/mp4", "content".getBytes());
         when(service.upload(anyString(), anyString(), any(), anyLong())).thenReturn(new VideoUploadResult("b","k","e"));
 
-        mockMvc.perform(multipart("/videos").file(file).param("userId", "u1"))
+        mockMvc.perform(multipart("/api/upload/videos").file(file).param("userId", "u1"))
                 .andExpect(status().isOk());
 
         verify(service, times(1)).upload(eq("u1"), anyString(), any(), anyLong());

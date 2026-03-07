@@ -36,6 +36,7 @@ public class UpdateVideoService implements UpdateStatusUseCase {
         log.info("Verificando se videoId existe: videoId={}", videoId);
         Optional<VideoWorkflow> existing = repository.findByVideoId(videoId);
 
+        // if we don't have an existing record and the event is not 'video.uploaded', ignore
         if (existing.isEmpty() && !"video.uploaded".equals(eventType)) {
             log.warn("Recebido evento {} para videoId={} mas não existe registro; ignorando (aguardando video.uploaded)", eventType, videoId);
             return null;
@@ -48,8 +49,15 @@ public class UpdateVideoService implements UpdateStatusUseCase {
 
         switch (eventType) {
             case "video.uploaded" -> {
-                log.info("Ignorando evento video.uploaded para videoId={}", videoId);
-                return null;
+                // Create/populate new entity when userId and uploadPath are present
+                if (event.getUserId() == null || event.getUserId().isBlank() || event.getUploadPath() == null || event.getUploadPath().isBlank()) {
+                    log.warn("Received video.uploaded for videoId={} but missing userId/uploadPath; ignoring", videoId);
+                    return null;
+                }
+                wf.setUserId(event.getUserId());
+                wf.setUploadPath(event.getUploadPath());
+                wf.setUploadedAt(event.getUploadedAt() != null ? event.getUploadedAt() : Instant.now());
+                wf.setStatus("UPLOADED");
             }
             case "video.processing_started" -> wf.setStatus("PROCESSING");
             case "video.processed" -> {

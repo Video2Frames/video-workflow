@@ -4,6 +4,7 @@ import com.store.workflowService.consultation.application.usecases.ConsultationU
 import com.store.workflowService.consultation.application.usecases.dto.DownloadResult;
 import com.store.workflowService.consultation.application.usecases.dto.VideoDto;
 import com.store.workflowService.consultation.infrastructure.adapters.in.controller.ConsultationController;
+import com.store.workflowService.utils.exception.VideoNotFoundException;
 import com.store.workflowService.utils.exception.advice.ExceptionHandlerAdvice;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,15 +60,16 @@ public class ConsultationControllerTest {
 
     @Test
     void downloadVideo_missingUserId_returnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/consultation/videos/any/download"))
+        // call the actual download endpoint without user_id -> MissingServletRequestParameterException -> 500
+        mockMvc.perform(get("/api/consultation/download").param("video_id", "any"))
                 .andExpect(status().isInternalServerError());
     }
 
     @Test
     void downloadVideo_whenUseCaseThrows_returnsNotFound() throws Exception {
-        when(useCase.downloadOutput(anyString(), anyString())).thenThrow(new RuntimeException("not found"));
+        when(useCase.downloadOutput(anyString(), anyString())).thenThrow(new VideoNotFoundException("not found"));
 
-        mockMvc.perform(get("/api/consultation/videos/vid/download").param("user_id", "user1"))
+        mockMvc.perform(get("/api/consultation/download").param("video_id", "vid").param("user_id", "user1"))
                 .andExpect(status().isNotFound());
 
         verify(useCase, times(1)).downloadOutput("user1", "vid");
@@ -80,7 +82,7 @@ public class ConsultationControllerTest {
         DownloadResult dr = new DownloadResult(resource, MediaType.APPLICATION_OCTET_STREAM, "file.zip");
         when(useCase.downloadOutput("abc", "vid123")).thenReturn(dr);
 
-        mockMvc.perform(get("/api/consultation/videos/vid123/download").param("user_id", "abc"))
+        mockMvc.perform(get("/api/consultation/download").param("video_id", "vid123").param("user_id", "abc"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"file.zip\""))
                 .andExpect(content().contentType("application/zip"));
