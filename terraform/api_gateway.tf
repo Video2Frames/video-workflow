@@ -29,9 +29,10 @@ resource "aws_apigatewayv2_integration" "video_integration" {
 
 resource "aws_apigatewayv2_route" "video_route" {
   api_id    = aws_apigatewayv2_api.video_api.id
-  route_key = "ANY /hackathon/v1/video-workflow/{proxy+}"
+  route_key = "ANY /hackathon/v1/video-workflow"
 
   target = "integrations/${aws_apigatewayv2_integration.video_integration.id}"
+  authorization_type = "NONE"
 }
 
 ############################################
