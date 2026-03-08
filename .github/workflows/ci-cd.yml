@@ -11,31 +11,46 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ECR_ALIAS: ${{ vars.ECR_PUBLIC_ALIAS }}
+  APP_NAME: video-workflow
   AWS_REGION: ${{ vars.AWS_REGION }}
   IMAGE_NAME: public.ecr.aws/${{ vars.ECR_PUBLIC_ALIAS }}/video-workflow
   IMAGE_TAG: sha-${{ github.sha }}
 
+###########################################################
+# TERRAFORM FORMAT CHECK
+###########################################################
 jobs:
 
-  ###########################################################
-  # BUILD & PUSH IMAGE
-  ###########################################################
-  build-and-push:
+  terraform-format:
+    name: Terraform Format Check
     runs-on: ubuntu-latest
-    environment: production
 
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
+    defaults:
+      run:
+        working-directory: terraform
 
     steps:
       - uses: actions/checkout@v5
 
-      ###########################################################
-      # JAVA SETUP
-      ###########################################################
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13"
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+  ###########################################################
+  # BUILD + TEST + COVERAGE
+  ###########################################################
+
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    needs: terraform-format
+
+    steps:
+      - uses: actions/checkout@v5
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -43,15 +58,9 @@ jobs:
           distribution: temurin
           cache: maven
 
-      ###########################################################
-      # BUILD + TEST + COVERAGE
-      ###########################################################
-      - name: Build with Tests and Coverage
+      - name: Build with Tests
         run: mvn -B clean verify
 
-      ###########################################################
-      # TEST REPORT
-      ###########################################################
       - name: Publish Test Report
         uses: dorny/test-reporter@v1
         if: always()
@@ -60,23 +69,69 @@ jobs:
           path: target/surefire-reports/*.xml
           reporter: java-junit
 
-      ###########################################################
-      # UPLOAD COVERAGE
-      ###########################################################
-      - name: Upload Coverage Report
+      - name: Upload Coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: jacoco-report
           path: target/site/jacoco
 
-      ###########################################################
-      # SHOW COVERAGE IN PR
-      ###########################################################
-      - name: Jacoco Coverage Report
-        uses: madrapps/jacoco-report@v1.6
+  ###########################################################
+  # SONARCLOUD
+  ###########################################################
+
+  sonarqube:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v5
         with:
-          paths: target/site/jacoco/jacoco.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Cache Sonar packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+
+      - name: Build and Analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn -B verify \
+          org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=video-workflow \
+          -Dsonar.organization=video2frames \
+          -Dsonar.host.url=https://sonarcloud.io \
+          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+  ###########################################################
+  # BUILD & PUSH IMAGE
+  ###########################################################
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: sonarqube
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v5
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -88,8 +143,15 @@ jobs:
       - name: Ensure ECR Public repository exists
         run: |
           REPO="video-workflow"
-          if ! aws ecr-public describe-repositories --repository-names "$REPO" --region "$AWS_REGION" >/dev/null 2>&1; then
-            aws ecr-public create-repository --repository-name "$REPO" --region "$AWS_REGION"
+
+          if ! aws ecr-public describe-repositories \
+          --repository-names "$REPO" \
+          --region "$AWS_REGION" >/dev/null 2>&1; then
+
+            aws ecr-public create-repository \
+            --repository-name "$REPO" \
+            --region "$AWS_REGION"
+
           fi
 
       - name: Login to ECR Public
@@ -99,18 +161,25 @@ jobs:
 
       - name: Build and Push Image
         run: |
-          docker build -f docker/app/Dockerfile -t "$IMAGE_NAME:$IMAGE_TAG" .
+          docker build -f docker/app/Dockerfile \
+            -t "$IMAGE_NAME:$IMAGE_TAG" .
+
           docker push "$IMAGE_NAME:$IMAGE_TAG"
+
           docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
           docker push "$IMAGE_NAME:latest"
 
   ###########################################################
   # TERRAFORM APPLY
   ###########################################################
+
   terraform-apply:
+    name: Terraform Apply
     runs-on: ubuntu-latest
-    environment: production
     needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    environment: production
 
     defaults:
       run:
@@ -133,16 +202,17 @@ jobs:
       ###########################################################
       # Terraform Init
       ###########################################################
+
       - name: Terraform Init
         run: terraform init -input=false -reconfigure
 
       ###########################################################
       # Terraform Apply
       ###########################################################
+
       - name: Terraform Apply
         run: |
           FULL_IMAGE="$IMAGE_NAME:$IMAGE_TAG"
-          echo "Deploying image: $FULL_IMAGE"
 
           terraform apply -input=false -auto-approve -lock-timeout=300s \
             -var region="${{ vars.AWS_REGION }}" \
@@ -161,42 +231,18 @@ jobs:
             -var force_rollout="$(date +%s)"
 
       ###########################################################
-      # Wait for Ingress (segurança extra)
+      # Configure kubectl
       ###########################################################
+
       - name: Configure kubectl
         run: |
           aws eks --region "${{ vars.AWS_REGION }}" update-kubeconfig \
             --name "${{ vars.EKS_CLUSTER_NAME }}"
 
-      - name: Wait for Ingress LoadBalancer
-        run: |
-          set -euo pipefail
-          NAMESPACE=hackathon
-          INGRESS_NAME=video-workflow-route
-
-          for i in {1..30}; do
-            HOSTNAME=$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" \
-              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
-
-            if [ -n "$HOSTNAME" ]; then
-              echo "Ingress hostname ready: $HOSTNAME"
-              break
-            fi
-
-            echo "Waiting for ingress..."
-            sleep 10
-          done
-
       ###########################################################
-      # Show Final API Gateway URL
+      # Show Ingress
       ###########################################################
-      - name: Show API Gateway URL
+
+      - name: Show Ingress
         run: |
-          echo ""
-          echo "==============================================="
-          echo "API Gateway Endpoint:"
-          terraform output api_gateway_url
-          echo ""
-          echo "Full URL:"
-          echo "$(terraform output -raw api_gateway_url)/hackathon/v1/video-workflow"
-          echo "==============================================="
+          kubectl get ingress -n hackathon
