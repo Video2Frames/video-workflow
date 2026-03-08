@@ -77,7 +77,7 @@ resource "aws_iam_policy" "video_workflow_policy" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ]
-        Resource = [data.aws_sqs_queue.status_queue.arn, data.aws_sqs_queue.notifications_queue.arn]
+        Resource = "arn:aws:sqs:${var.region}:811740411353:*"
       },
 
       ####################################
