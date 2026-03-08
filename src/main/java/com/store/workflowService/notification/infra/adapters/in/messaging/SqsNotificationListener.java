@@ -21,23 +21,22 @@ public class SqsNotificationListener {
 
     private static final Logger log = LoggerFactory.getLogger(SqsNotificationListener.class);
 
+    private static final String HARDCODED_RECIPIENT = "ponteskarenklp82@gmail.com";
+
     private final SqsClient sqsClient;
     private final NotificationUseCase notificationUseCase;
     private final ObjectMapper objectMapper;
     private final String notificationsQueueUrl;
     private final boolean enabled;
-    private final String testRecipient;
 
     public SqsNotificationListener(SqsClient sqsClient,
                                    NotificationUseCase notificationUseCase,
                                    ObjectMapper objectMapper,
-                                   @Value("${aws.sqs.notifications-queue-url:}") String notificationsQueueUrl,
-                                   @Value("${notification.test.recipient:}") String testRecipient) {
+                                   @Value("${aws.sqs.notifications-queue-url:}") String notificationsQueueUrl) {
         this.sqsClient = sqsClient;
         this.notificationUseCase = notificationUseCase;
         this.objectMapper = objectMapper;
         this.notificationsQueueUrl = notificationsQueueUrl == null ? "" : notificationsQueueUrl.trim();
-        this.testRecipient = testRecipient == null ? "" : testRecipient.trim();
         this.enabled = !this.notificationsQueueUrl.isBlank();
 
         if (enabled) {
@@ -106,11 +105,9 @@ public class SqsNotificationListener {
                     StatusEvent event = objectMapper.treeToValue(payload, StatusEvent.class);
                     event.setEventType(eventType);
 
-                    // If a test recipient is configured (local testing), override recipient; otherwise use event payload
-                    if (!this.testRecipient.isBlank()) {
-                        event.setUserEmail(this.testRecipient);
-                        log.info("Overriding recipient email for testing: {}", event.getUserEmail());
-                    }
+                    // Force hardcoded recipient for all environments as requested
+                    event.setUserEmail(HARDCODED_RECIPIENT);
+                    log.info("Hardcoded recipient set for testing: {}", HARDCODED_RECIPIENT);
 
                     notificationUseCase.handle(event);
 

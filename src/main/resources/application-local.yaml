@@ -49,7 +49,7 @@ aws:
 # Test recipient convenience for local testing (empty in prod)
 notification:
   test:
-    recipient: karen-_-19@outlook.com
+    recipient: ponteskarenklp82@gmail.com
 
 aws.sqs.poll-delay-ms: 5000
 

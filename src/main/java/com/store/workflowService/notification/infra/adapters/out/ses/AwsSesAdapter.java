@@ -21,9 +21,12 @@ public class AwsSesAdapter {
     private final SesClient sesClient;
     private final String fromEmail;
 
-    public AwsSesAdapter(SesClient sesClient, @Value("${aws.ses.from-email}") String fromEmail) {
+    public AwsSesAdapter(SesClient sesClient, @Value("${aws.ses.from-email:noreply@video.com}") String fromEmail) {
         this.sesClient = sesClient;
         this.fromEmail = fromEmail;
+        if (fromEmail == null || !fromEmail.contains("@")) {
+            log.warn("Configured aws.ses.from-email is invalid or missing, defaulting to 'noreply@video.com': {}", fromEmail);
+        }
     }
 
     public void sendProcessedEmail(String to, StatusEvent event) {
@@ -38,9 +41,27 @@ public class AwsSesAdapter {
         sendEmail(to, subject, bodyText);
     }
 
+    private boolean isValidEmail(String email) {
+        return email != null && email.contains("@") && !email.endsWith("@");
+    }
+
     private void sendEmail(String to, String subject, String bodyText) {
         try {
-            Destination destination = Destination.builder().toAddresses(to).build();
+            String effectiveFrom = (isValidEmail(fromEmail)) ? fromEmail : "noreply@video.com";
+
+            if (!isValidEmail(effectiveFrom)) {
+                log.error("Invalid SES 'from' address configured: {} — aborting send", fromEmail);
+                return;
+            }
+
+            String effectiveTo = to;
+            if (!isValidEmail(effectiveTo)) {
+                // fallback to from address if recipient invalid
+                log.warn("Invalid 'to' address provided ({}), falling back to from-address {}", to, effectiveFrom);
+                effectiveTo = effectiveFrom;
+            }
+
+            Destination destination = Destination.builder().toAddresses(effectiveTo).build();
 
             Content subj = Content.builder().data(subject).charset("UTF-8").build();
             Content bodyContent = Content.builder().data(bodyText).charset("UTF-8").build();
@@ -50,7 +71,7 @@ public class AwsSesAdapter {
             SendEmailRequest req = SendEmailRequest.builder()
                     .destination(destination)
                     .message(message)
-                    .source(fromEmail)
+                    .source(effectiveFrom)
                     .build();
 
             SendEmailResponse resp = sesClient.sendEmail(req);
@@ -60,4 +81,3 @@ public class AwsSesAdapter {
         }
     }
 }
-
