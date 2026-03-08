@@ -15,3 +15,7 @@ data "aws_db_instance" "db_instance" {
 data "aws_sqs_queue" "status_queue" {
   name = "status-updates.fifo"
 }
+
+data "aws_sqs_queue" "notifications_queue" {
+  name = "notifications"
+}
