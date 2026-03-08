@@ -32,6 +32,7 @@ app:
 aws:
   ses:
     from-email: ${SES_FROM_EMAIL}
+    notifications-queue-url: {AWS_SQS_NOTIFICATIONS_QUEUE_URL}
 
   region: ${AWS_REGION:us-east-1}
 

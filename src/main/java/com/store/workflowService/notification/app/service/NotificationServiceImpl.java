@@ -17,7 +17,7 @@ public class NotificationServiceImpl implements NotificationUseCase {
     private final String fallbackRecipient;
 
     public NotificationServiceImpl(AwsSesAdapter sesAdapter,
-                                   @Value("${aws.ses.from-email:noreply@video.com}") String fallbackRecipient) {
+                                   @Value("${aws.ses.from-email") String fallbackRecipient) {
         this.sesAdapter = sesAdapter;
         this.fallbackRecipient = fallbackRecipient;
     }

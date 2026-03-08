@@ -16,6 +16,7 @@ variable "db_password" {
 
 variable "video_bucket" {}
 variable "aws_sqs_status_queue_url" {}
+variable "aws_sqs_notification_queue_url" {}
 variable "sns_topic_arn" {}
 
 variable "force_rollout" {

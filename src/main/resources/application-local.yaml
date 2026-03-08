@@ -46,6 +46,11 @@ aws:
     status-queue-url: http://localhost:4566/000000000000/status-updates-processing-queue.fifo
     notifications-queue-url: http://localhost:4566/000000000000/notifications-processing-queue.fifo
 
+# Test recipient convenience for local testing (empty in prod)
+notification:
+  test:
+    recipient: karen-_-19@outlook.com
+
 aws.sqs.poll-delay-ms: 5000
 
 # Permite logs mais verbosos do SQL em dev local

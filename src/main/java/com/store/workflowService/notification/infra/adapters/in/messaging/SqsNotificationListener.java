@@ -25,20 +25,35 @@ public class SqsNotificationListener {
     private final NotificationUseCase notificationUseCase;
     private final ObjectMapper objectMapper;
     private final String notificationsQueueUrl;
+    private final boolean enabled;
+    private final String testRecipient;
 
     public SqsNotificationListener(SqsClient sqsClient,
                                    NotificationUseCase notificationUseCase,
                                    ObjectMapper objectMapper,
-                                   @Value("${aws.sqs.notifications-queue-url}") String notificationsQueueUrl) {
-        log.info("Notification SQS Listener started with queueUrl={}", notificationsQueueUrl);
+                                   @Value("${aws.sqs.notifications-queue-url:}") String notificationsQueueUrl,
+                                   @Value("${notification.test.recipient:}") String testRecipient) {
         this.sqsClient = sqsClient;
         this.notificationUseCase = notificationUseCase;
         this.objectMapper = objectMapper;
-        this.notificationsQueueUrl = notificationsQueueUrl;
+        this.notificationsQueueUrl = notificationsQueueUrl == null ? "" : notificationsQueueUrl.trim();
+        this.testRecipient = testRecipient == null ? "" : testRecipient.trim();
+        this.enabled = !this.notificationsQueueUrl.isBlank();
+
+        if (enabled) {
+            log.info("Notification SQS Listener started with queueUrl={}", this.notificationsQueueUrl);
+        } else {
+            log.warn("Notification SQS Listener is disabled because 'aws.sqs.notifications-queue-url' is not configured");
+        }
     }
 
     @Scheduled(fixedDelayString = "${aws.sqs.poll-delay-ms:5000}")
     public void pollNotificationsQueue() {
+        if (!enabled) {
+            // listener disabled in this environment
+            return;
+        }
+
         try {
             ReceiveMessageRequest req = ReceiveMessageRequest.builder()
                     .queueUrl(notificationsQueueUrl)
@@ -91,9 +106,11 @@ public class SqsNotificationListener {
                     StatusEvent event = objectMapper.treeToValue(payload, StatusEvent.class);
                     event.setEventType(eventType);
 
-                    // Hardcode recipient for local testing as requested
-                    event.setUserEmail("karen-_-19@outlook.com");
-                    log.info("Overriding recipient email for testing: {}", event.getUserEmail());
+                    // If a test recipient is configured (local testing), override recipient; otherwise use event payload
+                    if (!this.testRecipient.isBlank()) {
+                        event.setUserEmail(this.testRecipient);
+                        log.info("Overriding recipient email for testing: {}", event.getUserEmail());
+                    }
 
                     notificationUseCase.handle(event);
 

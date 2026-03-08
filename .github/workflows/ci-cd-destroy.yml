@@ -52,6 +52,7 @@ jobs:
             -var spring_datasource_url="${{ vars.SPRING_DATASOURCE_URL }}" \
             -var video_bucket="${{ vars.VIDEO_BUCKET }}" \
             -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
+            -var aws_sqs_notifications_queue_url="${{ vars.AWS_SQS_NOTIFICATIONS_QUEUE_URL }}" \
             -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
             -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
             -var ses_from_email="${{ vars.SES_FROM_EMAIL }}" \
