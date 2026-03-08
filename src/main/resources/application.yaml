@@ -46,6 +46,7 @@ aws:
   sqs:
     status-queue-url: ${AWS_SQS_STATUS_QUEUE_URL}
 
+
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:true}
