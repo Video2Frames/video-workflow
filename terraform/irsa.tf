@@ -68,7 +68,7 @@ resource "aws_iam_policy" "video_workflow_policy" {
       },
 
       ####################################
-      # Permissão para consumir SQS
+      # Permissão para consumir SQS (filas específicas)
       ####################################
       {
         Effect = "Allow"
@@ -77,7 +77,10 @@ resource "aws_iam_policy" "video_workflow_policy" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ]
-        Resource = "arn:aws:sqs:${var.region}:811740411353:*"
+        Resource = [
+          data.aws_sqs_queue.status_queue.arn,
+          data.aws_sqs_queue.notifications_queue.arn
+        ]
       },
 
       ####################################
@@ -119,6 +122,14 @@ resource "aws_iam_policy" "video_workflow_policy" {
   })
 }
 
+############################################
+# Anexar a política à função IRSA
+############################################
+
+resource "aws_iam_role_policy_attachment" "video_workflow_attach" {
+  role       = aws_iam_role.irsa.name
+  policy_arn = aws_iam_policy.video_workflow_policy.arn
+}
 
 ############################################
 # Kubernetes Service Account com IRSA
