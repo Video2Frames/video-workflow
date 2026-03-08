@@ -16,7 +16,7 @@ resource "aws_apigatewayv2_integration" "video_integration" {
   integration_type   = "HTTP_PROXY"
   integration_method = "ANY"
 
-  integration_uri = "http://${kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname}/{proxy}"
+  integration_uri = "http://${kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname}"
 
   payload_format_version = "1.0"
 
@@ -34,6 +34,7 @@ resource "aws_apigatewayv2_route" "video_route" {
   route_key = "ANY /hackathon/v1/video-workflow/{proxy+}"
 
   target = "integrations/${aws_apigatewayv2_integration.video_integration.id}"
+
   authorization_type = "NONE"
 }
 
