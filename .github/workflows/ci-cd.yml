@@ -118,8 +118,8 @@ jobs:
         run: |
           mvn -B verify \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=video-workflow \
-          -Dsonar.organization=video2frames \
+          -Dsonar.projectKey=videoframes_video-workflow \
+          -Dsonar.organization=videoframes \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.login=$SONAR_TOKEN \
           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
