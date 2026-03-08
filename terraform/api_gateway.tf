@@ -16,9 +16,13 @@ resource "aws_apigatewayv2_integration" "video_integration" {
   integration_type   = "HTTP_PROXY"
   integration_method = "ANY"
 
-  integration_uri = "http://${kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname}/{proxy}"
+  integration_uri = "http://${kubernetes_ingress_v1.app.status[0].load_balancer[0].ingress[0].hostname}"
 
   payload_format_version = "1.0"
+
+  request_parameters = {
+    "overwrite:path" = "/$request.path"
+  }
 
   depends_on = [
     kubernetes_ingress_v1.app
