@@ -9,10 +9,10 @@ resource "kubernetes_secret" "app" {
     SPRING_DATASOURCE_USERNAME = var.db_user
     SPRING_DATASOURCE_PASSWORD = var.db_password
 
-    VIDEO_BUCKET             = var.video_bucket
-    AWS_REGION               = var.region
-    AWS_SNS_TOPIC_ARN        = var.sns_topic_arn
-    AWS_SQS_STATUS_QUEUE_URL = var.aws_sqs_status_queue_url
+    VIDEO_BUCKET                    = var.video_bucket
+    AWS_REGION                      = var.region
+    AWS_SNS_TOPIC_ARN               = var.sns_topic_arn
+    AWS_SQS_STATUS_QUEUE_URL        = var.aws_sqs_status_queue_url
     AWS_SQS_NOTIFICATIONS_QUEUE_URL = var.aws_sqs_notifications_queue_url
 
     AWS_S3_ENDPOINT          = var.aws_s3_endpoint
