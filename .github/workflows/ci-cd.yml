@@ -10,6 +10,11 @@ concurrency:
   group: video-workflow-prod
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 env:
   APP_NAME: video-workflow
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -17,9 +22,13 @@ env:
   IMAGE_TAG: sha-${{ github.sha }}
 
 ###########################################################
-# TERRAFORM FORMAT CHECK
+# JOBS
 ###########################################################
 jobs:
+
+  ###########################################################
+  # TERRAFORM FORMAT CHECK
+  ###########################################################
 
   terraform-format:
     name: Terraform Format Check
@@ -95,6 +104,7 @@ jobs:
         with:
           java-version: 17
           distribution: temurin
+          cache: maven
 
       - name: Cache Sonar packages
         uses: actions/cache@v4
@@ -102,13 +112,7 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
 
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-
-      - name: Build and Analyze
+      - name: SonarCloud Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -147,11 +151,9 @@ jobs:
           if ! aws ecr-public describe-repositories \
           --repository-names "$REPO" \
           --region "$AWS_REGION" >/dev/null 2>&1; then
-
             aws ecr-public create-repository \
             --repository-name "$REPO" \
             --region "$AWS_REGION"
-
           fi
 
       - name: Login to ECR Public
