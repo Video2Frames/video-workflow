@@ -35,6 +35,9 @@ public class StatusEvent {
     @JsonProperty("user_id")
     private String userId;
 
+    @JsonProperty("to_email")
+    private String userEmail;
+
     public StatusEvent() {
     }
 
@@ -116,5 +119,13 @@ public class StatusEvent {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
     }
 }

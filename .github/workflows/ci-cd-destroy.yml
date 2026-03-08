@@ -54,6 +54,7 @@ jobs:
             -var aws_sqs_status_queue_url="${{ vars.AWS_SQS_STATUS_QUEUE_URL }}" \
             -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
             -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
+            -var ses_from_email="${{ vars.SES_FROM_EMAIL }}" \
             -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}"
 
       - name: Terraform Destroy Apply

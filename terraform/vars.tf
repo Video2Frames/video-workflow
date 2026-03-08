@@ -33,3 +33,8 @@ variable "aws_s3_path_style_access" {
 }
 
 variable "spring_datasource_url" {}
+
+variable "ses_from_email" {
+  description = "Email usado para envio no SES"
+  type        = string
+}

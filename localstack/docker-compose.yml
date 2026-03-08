@@ -8,7 +8,7 @@ services:
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=s3,sqs,sns,dynamodb
+      - SERVICES=s3,sqs,sns,dynamodb,ses
       - AWS_DEFAULT_REGION=us-east-1
       - DEBUG=1
       - LOCALSTACK_HOSTNAME=host.docker.internal

@@ -16,6 +16,8 @@ import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.SnsClientBuilder;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.SqsClientBuilder;
+import software.amazon.awssdk.services.ses.SesClient;
+import software.amazon.awssdk.services.ses.SesClientBuilder;
 
 import java.net.URI;
 
@@ -109,6 +111,31 @@ public class LocalAwsConfig {
             builder = builder.endpointOverride(URI.create(endpoint));
         } else {
             log.info("No SQS endpoint override configured; using AWS default for region {}", region);
+        }
+
+        return builder.build();
+    }
+
+    @Bean
+    public SesClient sesClient(
+            @Value("${aws.region:us-east-1}") String region,
+            @Value("${aws.ses.endpoint:}") String endpoint,
+            @Value("${aws.s3.access-key}") String accessKey,
+            @Value("${aws.s3.secret-key}") String secretKey
+    ) {
+        SesClientBuilder builder = SesClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(
+                        StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create(accessKey, secretKey)
+                        )
+                );
+
+        if (endpoint != null && !endpoint.isBlank()) {
+            log.info("Configuring SES client with endpoint override: {}", endpoint);
+            builder = builder.endpointOverride(URI.create(endpoint));
+        } else {
+            log.info("No SES endpoint override configured; using AWS default for region {}", region);
         }
 
         return builder.build();

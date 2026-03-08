@@ -29,6 +29,9 @@ app:
     key-prefix: video-uploads/
 
 aws:
+  ses:
+    from-email: noreply@video.com
+    endpoint: http://localhost:4566
   region: us-east-1
   s3:
     endpoint: http://localhost:4566
@@ -41,6 +44,7 @@ aws:
   sqs:
     endpoint: http://localhost:4566
     status-queue-url: http://localhost:4566/000000000000/status-updates-processing-queue.fifo
+    notifications-queue-url: http://localhost:4566/000000000000/notifications-processing-queue.fifo
 
 aws.sqs.poll-delay-ms: 5000
 

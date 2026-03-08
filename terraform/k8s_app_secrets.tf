@@ -19,6 +19,8 @@ resource "kubernetes_secret" "app" {
 
     SPRING_JPA_HIBERNATE_DDL_AUTO = "create"
     SWAGGER_ENABLED               = "true"
+
+    SES_FROM_EMAIL = var.ses_from_email
   }
 
   type = "Opaque"

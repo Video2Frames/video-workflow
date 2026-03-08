@@ -81,6 +81,18 @@ resource "aws_iam_policy" "video_workflow_policy" {
       },
 
       ####################################
+      # Permissão para enviar email (SES)
+      ####################################
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
+      },
+
+      ####################################
       # Bucket de upload de vídeos
       ####################################
       {
@@ -107,14 +119,6 @@ resource "aws_iam_policy" "video_workflow_policy" {
   })
 }
 
-############################################
-# Attach da policy à role
-############################################
-
-resource "aws_iam_role_policy_attachment" "attach" {
-  role       = aws_iam_role.irsa.name
-  policy_arn = aws_iam_policy.video_workflow_policy.arn
-}
 
 ############################################
 # Kubernetes Service Account com IRSA

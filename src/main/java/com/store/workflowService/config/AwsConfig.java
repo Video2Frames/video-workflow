@@ -9,6 +9,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.ses.SesClient;
 
 @Configuration
 @Profile("prod")
@@ -33,6 +34,14 @@ public class AwsConfig {
     @Bean
     public SqsClient sqsClient(@Value("${aws.region}") String region) {
         return SqsClient.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+    }
+
+    @Bean
+    public SesClient sesClient(@Value("${aws.region}") String region) {
+        return SesClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();

@@ -30,6 +30,9 @@ app:
     key-prefix: video-uploads/
 
 aws:
+  ses:
+    from-email: ${SES_FROM_EMAIL}
+
   region: ${AWS_REGION:us-east-1}
 
   s3:

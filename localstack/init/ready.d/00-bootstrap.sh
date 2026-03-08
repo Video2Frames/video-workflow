@@ -184,6 +184,28 @@ for file in "$RESOURCE_DIR"/sns/*.json; do
 done
 
 # =========================
+# SES
+# =========================
+log_section "✉️ Criando SES Email Identities..."
+
+for file in "$RESOURCE_DIR"/ses/*.json; do
+  [ -e "$file" ] || continue
+
+  EMAIL=$(jq -r '.email' "$file")
+
+  echo "➡️  Verificando email no SES: $EMAIL"
+
+  awslocal ses verify-email-identity \
+    --email-address "$EMAIL" > /dev/null || true
+
+  echo "✅ Email verificado no SES: $EMAIL"
+done
+
+echo ""
+echo "📋 Emails verificados no SES:"
+awslocal ses list-identities
+
+# =========================
 # DynamoDB
 # =========================
 log_section "🗃 Criando Tabelas DynamoDB..."
