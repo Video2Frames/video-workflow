@@ -121,7 +121,7 @@ jobs:
           -Dsonar.projectKey=videoframes_video-workflow \
           -Dsonar.organization=video2frames \
           -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.token=$SONAR_TOKEN \
           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
   ###########################################################

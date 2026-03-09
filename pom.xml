@@ -17,6 +17,7 @@
         <aws.sdk.version>2.25.28</aws.sdk.version>
         <springdoc.version>2.5.0</springdoc.version>
         <lombok.version>1.18.32</lombok.version>
+        <sonar.organization>video2frames</sonar.organization>
 
         <!-- sonar -->
         <sonar.coverage.jacoco.xmlReportPaths>
