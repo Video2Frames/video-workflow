@@ -116,7 +116,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B verify \
+          mvn -B sonar:sonar \
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
           -Dsonar.projectKey=videoframes_video-workflow \
           -Dsonar.organization=video2frames \
