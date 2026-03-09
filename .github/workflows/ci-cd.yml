@@ -119,7 +119,6 @@ jobs:
           else
             echo "Token exists: true"
           fi
-          
 
       - name: SonarCloud Analysis
         env:
