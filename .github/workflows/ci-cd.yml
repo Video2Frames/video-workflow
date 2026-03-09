@@ -112,15 +112,23 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
 
+      - name: Debug SONAR_TOKEN
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "Token exists: false"
+          else
+            echo "Token exists: true"
+          fi
+
       - name: SonarCloud Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -B sonar:sonar \
+          mvn -B clean verify sonar:sonar \
             -Dsonar.projectKey=video2frames_video-workflow \
             -Dsonar.organization=video2frames \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=$SONAR_TOKEN \
+            -Dsonar.token=${SONAR_TOKEN} \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
   ###########################################################
