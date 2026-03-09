@@ -117,7 +117,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -B sonar:sonar \
-            -Dsonar.projectKey=videoframes_video-workflow \
+            -Dsonar.projectKey=video2frames_video-workflow \
             -Dsonar.organization=video2frames \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=$SONAR_TOKEN \
