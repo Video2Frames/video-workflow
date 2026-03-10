@@ -85,9 +85,43 @@ public class ConsultationController {
     @GetMapping("/download")
     public ResponseEntity<InputStreamResource> downloadVideo(
             @RequestParam("video_id") String videoId,
-            @RequestParam(name = "user_id") String userId) {
-        if (userId == null || userId.isBlank()) {
-            return ResponseEntity.badRequest().build();
+            @RequestHeader(value = "Authorization") String bearerToken) {
+
+        String header = bearerToken.trim();
+        String lower = header.toLowerCase();
+        if (lower.startsWith("authorization:")) {
+            header = header.substring("authorization:".length()).trim();
+            lower = header.toLowerCase();
+        }
+
+        if (lower.startsWith("bearer ")) {
+            String raw = header.substring(7).trim();
+            header = "Bearer " + raw;
+        } else {
+            header = "Bearer " + header;
+        }
+
+        String userId;
+        try {
+            String raw = client.getUserInfo(header);
+            if (raw == null || raw.isBlank()) {
+                throw new VideoUploadException("Empty response from user auth service");
+            }
+
+            String json = raw.trim();
+            if (json.startsWith("\"") && json.endsWith("\"")) {
+                json = objectMapper.readValue(json, String.class);
+            }
+
+            UserAuthResponseDTO userInfo = objectMapper.readValue(json, UserAuthResponseDTO.class);
+            if (userInfo == null || userInfo.getId() == null || userInfo.getId().isBlank()) {
+                throw new VideoUploadException("Unable to resolve user from authorization token");
+            }
+            userId = userInfo.getId();
+        } catch (IOException e) {
+            throw new VideoUploadException("Failed to parse user info response", e);
+        } catch (Exception e) {
+            throw new VideoUploadException("Failed to resolve user from authorization service", e);
         }
 
         DownloadResult res = useCase.downloadOutput(userId, videoId);

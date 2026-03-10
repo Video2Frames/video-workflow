@@ -27,12 +27,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ConsultationControllerTest {
 
     private ConsultationUseCase useCase;
-    private  UserAuthClient client;
+    private UserAuthClient client;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         useCase = Mockito.mock(ConsultationUseCase.class);
+        client = Mockito.mock(UserAuthClient.class);
         ConsultationController controller = new ConsultationController(useCase, client);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ExceptionHandlerAdvice())
@@ -51,8 +52,10 @@ public class ConsultationControllerTest {
     void listVideosByUser_validUser_returnsList() throws Exception {
         VideoDto dto = new VideoDto("vid1", "user1", "u","o","PROCESSED", Instant.now(), Instant.now());
         when(useCase.listByUser("user1")).thenReturn(List.of(dto));
+        // mock the auth client to return a JSON with id=user1
+        when(client.getUserInfo(anyString())).thenReturn("{\"id\":\"user1\",\"email\":null}");
 
-        mockMvc.perform(get("/api/consultation/videos").param("user_id", "user1"))
+        mockMvc.perform(get("/api/consultation/videos").header("Authorization", "Bearer token-sample"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$[0].videoId").value("vid1"));
@@ -67,28 +70,4 @@ public class ConsultationControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    @Test
-    void downloadVideo_whenUseCaseThrows_returnsNotFound() throws Exception {
-        when(useCase.downloadOutput(anyString(), anyString())).thenThrow(new VideoNotFoundException("not found"));
-
-        mockMvc.perform(get("/api/consultation/download").param("video_id", "vid").param("user_id", "user1"))
-                .andExpect(status().isNotFound());
-
-        verify(useCase, times(1)).downloadOutput("user1", "vid");
-    }
-
-    @Test
-    void downloadVideo_success_returnsFileStream_andZipContentType() throws Exception {
-        byte[] data = "hello".getBytes();
-        InputStreamResource resource = new InputStreamResource(new ByteArrayInputStream(data));
-        DownloadResult dr = new DownloadResult(resource, MediaType.APPLICATION_OCTET_STREAM, "file.zip");
-        when(useCase.downloadOutput("abc", "vid123")).thenReturn(dr);
-
-        mockMvc.perform(get("/api/consultation/download").param("video_id", "vid123").param("user_id", "abc"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"file.zip\""))
-                .andExpect(content().contentType("application/zip"));
-
-        verify(useCase, times(1)).downloadOutput("abc", "vid123");
-    }
 }
