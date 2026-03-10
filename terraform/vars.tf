@@ -16,7 +16,7 @@ variable "db_password" {
 
 variable "API_URL" {
   description = "Url base exposta pelo API Gateway / Ingress"
-  type = string
+  type        = string
 }
 
 variable "video_bucket" {}
