@@ -4,6 +4,7 @@ import com.store.workflowService.consultation.application.usecases.ConsultationU
 import com.store.workflowService.consultation.application.usecases.dto.DownloadResult;
 import com.store.workflowService.consultation.application.usecases.dto.VideoDto;
 import com.store.workflowService.consultation.infrastructure.adapters.in.controller.ConsultationController;
+import com.store.workflowService.update.infra.adapters.out.client.UserAuthClient;
 import com.store.workflowService.utils.exception.VideoNotFoundException;
 import com.store.workflowService.utils.exception.advice.ExceptionHandlerAdvice;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,12 +27,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class ConsultationControllerTest {
 
     private ConsultationUseCase useCase;
+    private  UserAuthClient client;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         useCase = Mockito.mock(ConsultationUseCase.class);
-        ConsultationController controller = new ConsultationController(useCase);
+        ConsultationController controller = new ConsultationController(useCase, client);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ExceptionHandlerAdvice())
                 .build();

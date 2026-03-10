@@ -90,11 +90,8 @@ public class ConsultationServiceImpl implements ConsultationUseCase {
                 key = "";
             }
         } else if (outputPath.contains("/")) {
-            // Treat as a (relative) key already (may start with the configured keyPrefix)
             key = outputPath.startsWith("/") ? outputPath.substring(1) : outputPath;
         } else {
-            // Treat as filename produced earlier (example: id + extension or id + "-" + filename)
-            // The upload flow composes: keyPrefix + "/" + userId + "/" + id + "-" + fileName
             key = uploadProperties.getKeyPrefix()
                     + "/"
                     + wf.getUserId()
@@ -165,7 +162,7 @@ public class ConsultationServiceImpl implements ConsultationUseCase {
                 if (idx >= 0 && idx + 1 < zipBase.length()) {
                     zipBase = zipBase.substring(idx + 1);
                 }
-                if (zipBase == null || zipBase.isBlank()) {
+                if (zipBase.isBlank()) {
                     zipBase = wf.getVideoId();
                 }
                 final String zipFileName = zipBase + ".zip";
@@ -177,40 +174,49 @@ public class ConsultationServiceImpl implements ConsultationUseCase {
                 final S3Client s3ClientForZip = this.s3Client;
                 final String videoIdForZip = videoId;
 
-                // Start background thread to write ZIP content
-                Thread writer = new Thread(() -> {
-                    try (ZipOutputStream zos = new ZipOutputStream(pos)) {
-                        for (S3Object obj : contentsForZip) {
-                            String objKey = obj.key();
-                            // name inside zip: remove prefix
-                            String entryName = objKey.substring(prefixForZip.length());
-                            if (entryName == null || entryName.isEmpty()) {
-                                continue;
-                            }
-                            try {
-                                zos.putNextEntry(new ZipEntry(entryName));
-                                try (InputStream objIs = s3ClientForZip.getObject(GetObjectRequest.builder().bucket(bucketForZip).key(objKey).build())) {
-                                    copy(objIs, zos);
+                java.util.concurrent.atomic.AtomicBoolean writerStarted = new java.util.concurrent.atomic.AtomicBoolean(false);
+                try {
+                    Thread writer = new Thread(() -> {
+                        try (ZipOutputStream zos = new ZipOutputStream(pos)) {
+                            for (S3Object obj : contentsForZip) {
+                                String objKey = obj.key();
+                                String entryName = objKey.substring(prefixForZip.length());
+                                if (entryName.isEmpty()) {
+                                    continue;
                                 }
-                                zos.closeEntry();
-                            } catch (Exception ex) {
-                                log.error("Error adding S3 object to zip bucket={} key={} entry={} : {}", bucketForZip, objKey, entryName, ex.toString());
-                                // continue with next
+                                try {
+                                    zos.putNextEntry(new ZipEntry(entryName));
+                                    try (InputStream objIs = s3ClientForZip.getObject(GetObjectRequest.builder().bucket(bucketForZip).key(objKey).build())) {
+                                        copy(objIs, zos);
+                                    }
+                                    zos.closeEntry();
+                                } catch (Exception ex) {
+                                    log.error("Error adding S3 object to zip bucket={} key={} entry={} : {}", bucketForZip, objKey, entryName, ex.toString());
+                                }
                             }
+                            zos.finish();
+                        } catch (IOException ioe) {
+                            log.error("I/O error streaming ZIP for videoId={}: {}", videoIdForZip, ioe.toString());
+                            try { pos.close(); } catch (Exception ignore) {}
+                        } finally {
+                            try { pos.close(); } catch (Exception ignore) {}
                         }
-                        zos.finish();
-                    } catch (IOException ioe) {
-                        log.error("I/O error streaming ZIP for videoId={}: {}", videoIdForZip, ioe.toString());
-                        try { pos.close(); } catch (Exception ignore) {}
-                    } finally {
+                    }, "s3-zip-writer-" + videoIdForZip);
+                    writer.setDaemon(true);
+                    writer.start();
+                    writerStarted.set(true);
+
+                    return new DownloadResult(resource, MediaType.APPLICATION_OCTET_STREAM, zipFileName);
+                } catch (Exception ex) {
+                    // If anything failed before the writer started, ensure streams are closed to avoid leaks
+                    try { pos.close(); } catch (Exception ignore) {}
+                    try { pis.close(); } catch (Exception ignore) {}
+                    throw new RuntimeException("Error preparing zip stream", ex);
+                } finally {
+                    if (!writerStarted.get()) {
                         try { pos.close(); } catch (Exception ignore) {}
                     }
-                }, "s3-zip-writer-" + videoIdForZip);
-                writer.setDaemon(true);
-                writer.start();
-
-                return new DownloadResult(resource, MediaType.APPLICATION_OCTET_STREAM, zipFileName);
-
+                }
             } catch (IOException io) {
                 log.error("Error preparing zip stream for videoId={}: {}", videoId, io.toString());
                 throw new RuntimeException("Error preparing zip stream", io);
