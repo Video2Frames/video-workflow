@@ -14,6 +14,11 @@ variable "db_password" {
   sensitive = true
 }
 
+variable "api_url" {
+  description = "Url base exposta pelo API Gateway / Ingress"
+  type        = string
+}
+
 variable "video_bucket" {}
 variable "aws_sqs_status_queue_url" {}
 variable "aws_sqs_notifications_queue_url" {}

@@ -29,6 +29,9 @@ app:
     bucket: ${VIDEO_BUCKET}
     key-prefix: video-uploads/
 
+api:
+  url: ${API_URL}
+
 management:
   endpoints:
     web:
