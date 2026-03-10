@@ -32,6 +32,12 @@ app:
 api:
   url: ${API_URL}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+
 aws:
   ses:
     from-email: ${SES_FROM_EMAIL}
