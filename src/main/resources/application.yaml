@@ -29,6 +29,12 @@ app:
     bucket: ${VIDEO_BUCKET}
     key-prefix: video-uploads/
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+
 aws:
   ses:
     from-email: ${SES_FROM_EMAIL}
