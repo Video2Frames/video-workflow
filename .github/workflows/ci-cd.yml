@@ -238,6 +238,7 @@ jobs:
             -var sns_topic_arn="${{ vars.SNS_TOPIC_ARN }}" \
             -var aws_s3_endpoint="${{ vars.AWS_S3_ENDPOINT }}" \
             -var aws_s3_path_style_access="${{ vars.AWS_S3_PATH_STYLE_ACCESS }}" \
+            -var api_url="${{ vars.API_URL }}" \
             -var ses_from_email="${{ vars.SES_FROM_EMAIL }}" \
             -var force_rollout="$(date +%s)"
 

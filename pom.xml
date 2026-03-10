@@ -16,7 +16,7 @@
         <java.version>17</java.version>
         <aws.sdk.version>2.25.28</aws.sdk.version>
         <springdoc.version>2.5.0</springdoc.version>
-        <lombok.version>1.18.32</lombok.version>
+        <lombok.version>1.18.40</lombok.version>
         <sonar.organization>video2frames</sonar.organization>
 
         <!-- sonar -->
@@ -31,6 +31,15 @@
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
                 <version>2.25.35</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud BOM for OpenFeign compatibility -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>2023.0.6</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -92,6 +101,8 @@
             <version>${aws.sdk.version}</version>
         </dependency>
 
+
+
         <!-- SQS AWS SDK -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
@@ -120,6 +131,11 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
             <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
     </dependencies>

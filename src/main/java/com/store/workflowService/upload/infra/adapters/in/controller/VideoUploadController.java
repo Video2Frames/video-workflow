@@ -1,7 +1,9 @@
 package com.store.workflowService.upload.infra.adapters.in.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.store.workflowService.update.infra.adapters.out.client.UserAuthClient;
 import com.store.workflowService.upload.app.service.UploadVideoService;
-import com.store.workflowService.upload.domain.model.VideoUploadResult;
+import com.store.workflowService.update.infra.adapters.out.client.dto.UserAuthResponseDTO;
 import com.store.workflowService.utils.exception.VideoUploadException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,20 +19,19 @@ public class VideoUploadController {
     private static final long MAX_UPLOAD_BYTES = 200L * 1024L * 1024L;
 
     private final UploadVideoService service;
+    private final UserAuthClient client;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public VideoUploadController(UploadVideoService service) {
+    public VideoUploadController(UploadVideoService service, UserAuthClient client) {
         this.service = service;
+        this.client = client;
     }
 
 
     @PostMapping(value = "/videos", consumes = "multipart/form-data")
     public ResponseEntity<Void> upload(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("userId") String userId
-    ) {
-        if (userId == null || userId.isBlank()) {
-            throw new VideoUploadException("userId é obrigatório");
-        }
+            @RequestParam(value = "file") MultipartFile file,
+            @RequestHeader(value = "Authorization") String bearerToken) {
         if (file == null || file.isEmpty()) {
             throw new VideoUploadException("Arquivo é obrigatório");
         }
@@ -43,8 +44,49 @@ public class VideoUploadController {
 
         String safeFileName = sanitizeFileName(file.getOriginalFilename());
 
+        if (bearerToken == null || bearerToken.isBlank()) {
+            throw new VideoUploadException("Authorization header is required");
+        }
+
+        String header = bearerToken.trim();
+        String lower = header.toLowerCase();
+        if (lower.startsWith("authorization:")) {
+            header = header.substring("authorization:".length()).trim();
+            lower = header.toLowerCase();
+        }
+
+        if (lower.startsWith("bearer ")) {
+            String raw = header.substring(7).trim();
+            header = "Bearer " + raw;
+        } else {
+            header = "Bearer " + header;
+        }
+
+        String userId;
+        try {
+            String raw = client.getUserInfo(header);
+            if (raw == null || raw.isBlank()) {
+                throw new VideoUploadException("Empty response from user auth service");
+            }
+
+            String json = raw.trim();
+            if (json.startsWith("\"") && json.endsWith("\"")) {
+                json = objectMapper.readValue(json, String.class);
+            }
+
+            UserAuthResponseDTO userInfo = objectMapper.readValue(json, UserAuthResponseDTO.class);
+            if (userInfo == null || userInfo.getId() == null || userInfo.getId().isBlank()) {
+                throw new VideoUploadException("Unable to resolve user from authorization token");
+            }
+            userId = userInfo.getId();
+        } catch (IOException e) {
+            throw new VideoUploadException("Failed to parse user info response", e);
+        } catch (Exception e) {
+            throw new VideoUploadException("Failed to resolve user from authorization service", e);
+        }
+
         try (InputStream in = file.getInputStream()) {
-            VideoUploadResult result = service.upload(
+            service.upload(
                     userId.trim(),
                     safeFileName,
                     in,

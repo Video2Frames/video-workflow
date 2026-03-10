@@ -1,5 +1,7 @@
 package com.store.workflowService.upload;
 
+
+import com.store.workflowService.update.infra.adapters.out.client.UserAuthClient;
 import com.store.workflowService.upload.app.service.UploadVideoService;
 import com.store.workflowService.upload.infra.adapters.in.controller.VideoUploadController;
 import com.store.workflowService.upload.domain.model.VideoUploadResult;
@@ -13,6 +15,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,7 +28,8 @@ class VideoUploadControllerTest {
     @BeforeEach
     void setUp() {
         service = Mockito.mock(UploadVideoService.class);
-        VideoUploadController controller = new VideoUploadController(service);
+        UserAuthClient userAuthClient = Mockito.mock(UserAuthClient.class);
+        VideoUploadController controller = new VideoUploadController(service, userAuthClient);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ExceptionHandlerAdvice())
                 .build();
