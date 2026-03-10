@@ -14,7 +14,7 @@ variable "db_password" {
   sensitive = true
 }
 
-variable "API_URL" {
+variable "api_url" {
   description = "Url base exposta pelo API Gateway / Ingress"
   type        = string
 }
