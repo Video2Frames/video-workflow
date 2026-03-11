@@ -21,7 +21,7 @@ spring:
       max-file-size: 200MB
       max-request-size: 200MB
 api:
-  url: https://5r6zcppsr8.execute-api.us-east-1.amazonaws.com
+  url: https://54b3shq0y6.execute-api.us-east-1.amazonaws.com
 server:
   port: ${SERVER_PORT:8080}
 
